@@ -53,7 +53,7 @@ public partial class MainWindow : Window
 
     private void OnProductionLotInquiryRequested(object? sender, EventArgs e)
     {
-        var dlg = new ProductionLotDialog(_vm.CurrentMaterial, _vm.LotEntries) { Owner = this };
+        var dlg = new ProductionLotDialog(_vm.CurrentMaterial) { Owner = this };
         dlg.ShowDialog();
     }
 

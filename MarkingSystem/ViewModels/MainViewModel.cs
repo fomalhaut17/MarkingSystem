@@ -134,13 +134,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         CurrentMaterial = new MaterialInfo
         {
-            MaterialBarcode = barcode,
-            ProductName     = "플라스틱 커버 어셈블리",
-            ManufactureDate = DateTime.Now.ToString("yyyy-MM-dd"),
-            ContainerQty    = "100",
-            LotCode         = "2026031401ABCDE23045678",
-            LastIssuedSer   = "000000",
-            WorkDateTime    = DateTime.Now,
+            MaterialBarcode     = barcode,
+            ProductName         = "플라스틱 커버 어셈블리",
+            ManufactureDate     = DateTime.Now.ToString("yyyy-MM-dd"),
+            ContainerQty        = "100",
+            LotCode             = "2026031401ABCDE23045678",
+            LastIssuedSer       = "000000",
+            ProductionEquipment = "사출기-01",
+            ProductionMold      = "금형-A",
+            LotProductionQty    = "500",
+            WorkDateTime        = DateTime.Now,
         };
 
         LotEntries.Clear();

@@ -5,32 +5,26 @@ namespace MarkingSystem.Views;
 
 public partial class ProductionLotDialog : Window
 {
-    public ProductionLotDialog(MaterialInfo? info, IEnumerable<LotEntry> entries)
+    public ProductionLotDialog(MaterialInfo? info = null)
     {
         InitializeComponent();
 
+        TxtDate.Text = DateTime.Now.ToString("yyyy년 M월 d일");
+
         if (info != null)
         {
-            TxtMaterialBarcode.Text = info.MaterialBarcode;
-            TxtProductName.Text     = info.ProductName;
-            TxtLotCode.Text         = info.LotCode;
-            TxtWorkDate.Text        = info.WorkDateTime.ToString("yyyy-MM-dd  HH:mm");
+            TxtLotBarcode.Text          = info.LotCode;
+            TxtProductName.Text         = info.ProductName;
+            TxtManufactureDate.Text     = info.ManufactureDate;
+            TxtProductionEquipment.Text = info.ProductionEquipment;
+            TxtProductionMold.Text      = info.ProductionMold;
+            TxtLotProductionQty.Text    = info.LotProductionQty;
         }
+    }
 
-        var lotList = entries.ToList();
-        LotGrid.ItemsSource = lotList;
-
-        int ok    = lotList.Count(e => e.Result == InspectionResult.OK);
-        int ng    = lotList.Count(e => e.Result == InspectionResult.NG);
-        int ad    = lotList.Count(e => e.Result == InspectionResult.AD);
-        int total = lotList.Count;
-
-        TxtOkCount.Text    = $"양품 (OK)  {ok}";
-        TxtNgCount.Text    = $"불량 (NG)  {ng}";
-        TxtAdCount.Text    = $"대기 (AD)  {ad}";
-        TxtTotalCount.Text = $"합계  {total}";
-
-        InjGrid.ItemsSource = InjectionConditionFactory.CreateSampleData();
+    private void LotSearchBtn_Click(object sender, RoutedEventArgs e)
+    {
+        // TODO: wizMES 연동 후 구현
     }
 
     private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
