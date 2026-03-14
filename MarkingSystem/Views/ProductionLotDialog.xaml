@@ -10,7 +10,7 @@
         Background="#1C1C1C"
         AllowsTransparency="False"
         WindowStartupLocation="CenterOwner"
-        FontFamily="Segoe UI Variable, Segoe UI, Malgun Gothic">
+        FontFamily="NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="44" ResizeBorderThickness="5"

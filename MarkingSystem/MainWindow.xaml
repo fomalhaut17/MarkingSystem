@@ -10,7 +10,7 @@
         ResizeMode="CanResize"
         Background="#1C1C1C"
         AllowsTransparency="False"
-        FontFamily="Segoe UI Variable, Segoe UI, Malgun Gothic">
+        FontFamily="NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="46"

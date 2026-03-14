@@ -69,7 +69,7 @@
          TYPOGRAPHY
     ═══════════════════════════════════════════════════════ -->
 
-    <FontFamily x:Key="AppFont">Segoe UI Variable, Segoe UI, Malgun Gothic, Arial</FontFamily>
+    <FontFamily x:Key="AppFont">NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic, Arial</FontFamily>
 
     <!-- ═══════════════════════════════════════════════════════
          BUTTON STYLES
