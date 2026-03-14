@@ -12,8 +12,8 @@ public partial class ProductionLotDialog : Window
         if (info != null)
         {
             TxtMaterialBarcode.Text = info.MaterialBarcode;
-            TxtItemCode.Text        = info.ItemCode;
             TxtProductName.Text     = info.ProductName;
+            TxtLotCode.Text         = info.LotCode;
             TxtWorkDate.Text        = info.WorkDateTime.ToString("yyyy-MM-dd  HH:mm");
         }
 

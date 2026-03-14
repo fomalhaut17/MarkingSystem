@@ -1,213 +1,163 @@
 <Window x:Class="MarkingSystem.Views.ProductionLotDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:models="clr-namespace:MarkingSystem.Models"
         Title="생산 Lot 조회"
         Width="960" Height="680"
         MinWidth="800" MinHeight="560"
-        WindowStyle="None"
+        WindowStyle="SingleBorderWindow"
         ResizeMode="CanResize"
-        Background="#1C1C1C"
-        AllowsTransparency="False"
+        Background="White"
         WindowStartupLocation="CenterOwner"
         FontFamily="NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic">
-
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="44" ResizeBorderThickness="5"
-                      GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
-    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         <ResourceDictionary Source="../Styles/FluentDark.xaml"/>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="White">
         <Grid.RowDefinitions>
-            <RowDefinition Height="44"/>    <!-- title bar -->
-            <RowDefinition Height="Auto"/>  <!-- header info -->
-            <RowDefinition Height="*"/>     <!-- content tabs -->
-            <RowDefinition Height="Auto"/>  <!-- footer -->
+            <RowDefinition Height="Auto"/>  <!-- 헤더 정보  -->
+            <RowDefinition Height="1"/>     <!-- 구분선     -->
+            <RowDefinition Height="*"/>     <!-- Lot 목록  -->
+            <RowDefinition Height="Auto"/>  <!-- 사출 조건 제목 -->
+            <RowDefinition Height="180"/>   <!-- 사출 조건 표  -->
+            <RowDefinition Height="Auto"/>  <!-- 푸터 버튼  -->
         </Grid.RowDefinitions>
 
-        <!-- ── Title Bar ─────────────────────────────────────── -->
-        <Border Grid.Row="0" Background="#202020" BorderBrush="#2E2E2E" BorderThickness="0,0,0,1">
-            <Grid>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                    <Border Width="16" Height="16" Background="#0078D4" CornerRadius="3" Margin="0,0,8,0">
-                        <TextBlock Text="M" Foreground="White" FontSize="10" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <TextBlock Text="생산 Lot 조회" Foreground="White" FontSize="14" FontWeight="SemiBold"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-                <Button Content="✕" Click="CloseBtn_Click"
-                        Width="44" Height="44"
-                        HorizontalAlignment="Right"
-                        Style="{StaticResource CloseButton}"
-                        Foreground="#ABABAB" FontSize="13"
-                        WindowChrome.IsHitTestVisibleInChrome="True"/>
-            </Grid>
-        </Border>
+        <!-- ── 헤더: 주요 정보 ── -->
+        <Grid Grid.Row="0" Margin="20,16" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- ── Header Info ───────────────────────────────────── -->
-        <Border Grid.Row="1" Background="#202020" Padding="20,14" BorderBrush="#2E2E2E" BorderThickness="0,0,0,1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                <TextBlock Text="물류 바코드" Style="{StaticResource LabelText}"/>
+                <TextBlock x:Name="TxtMaterialBarcode" Text="-" Style="{StaticResource BodyText}" FontWeight="Bold"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                <TextBlock Text="품명" Style="{StaticResource LabelText}"/>
+                <TextBlock x:Name="TxtProductName" Text="-" Style="{StaticResource BodyText}" FontWeight="Bold"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Margin="0,0,16,0">
+                <TextBlock Text="Lot 코드" Style="{StaticResource LabelText}"/>
+                <TextBlock x:Name="TxtLotCode" Text="-" Style="{StaticResource BodyText}" FontWeight="Bold"
+                           FontFamily="Consolas, Courier New, Malgun Gothic" FontSize="13"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+            <StackPanel Grid.Column="3">
+                <TextBlock Text="작업일시" Style="{StaticResource LabelText}"/>
+                <TextBlock x:Name="TxtWorkDate" Text="-" Style="{StaticResource BodyText}" FontWeight="Bold"/>
+            </StackPanel>
+        </Grid>
 
-                <!-- Material Barcode -->
-                <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                    <TextBlock Text="물류 바코드" Style="{StaticResource LabelText}"/>
-                    <TextBlock x:Name="TxtMaterialBarcode" Text="-" Style="{StaticResource BodyText}" FontWeight="Medium"/>
-                </StackPanel>
+        <!-- 구분선 -->
+        <Rectangle Grid.Row="1" Fill="#E0E0E0"/>
 
-                <!-- Item Code -->
-                <StackPanel Grid.Column="1" Margin="0,0,16,0">
-                    <TextBlock Text="품번" Style="{StaticResource LabelText}"/>
-                    <TextBlock x:Name="TxtItemCode" Text="-" Style="{StaticResource BodyText}" FontWeight="Medium"/>
-                </StackPanel>
-
-                <!-- Product Name -->
-                <StackPanel Grid.Column="2" Margin="0,0,16,0">
-                    <TextBlock Text="품명" Style="{StaticResource LabelText}"/>
-                    <TextBlock x:Name="TxtProductName" Text="-" Style="{StaticResource BodyText}" FontWeight="Medium"/>
-                </StackPanel>
-
-                <!-- Work Date -->
-                <StackPanel Grid.Column="3">
-                    <TextBlock Text="작업일시" Style="{StaticResource LabelText}"/>
-                    <TextBlock x:Name="TxtWorkDate" Text="-" Style="{StaticResource BodyText}" FontWeight="Medium"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- ── Content ───────────────────────────────────────── -->
+        <!-- ── Lot 목록 ── -->
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="180"/>
             </Grid.RowDefinitions>
 
-            <!-- Summary Chips -->
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,14,20,10">
-                <!-- OK -->
-                <Border Background="#0A2D1A" BorderBrush="#0DAE65" BorderThickness="1"
-                        CornerRadius="20" Padding="14,6" Margin="0,0,8,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="#0DAE65" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtOkCount" Text="양품 (OK)  0" Foreground="#0DAE65"
-                                   FontSize="13" FontWeight="SemiBold"/>
-                    </StackPanel>
+            <!-- 요약 칩 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="20,10,20,8">
+                <Border Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1"
+                        CornerRadius="12" Padding="12,4" Margin="0,0,8,0">
+                    <TextBlock x:Name="TxtOkCount" Text="양품 (OK)  0"
+                               Foreground="#2E7D32" FontSize="12" FontWeight="Bold"/>
                 </Border>
-                <!-- NG -->
-                <Border Background="#2D0A0A" BorderBrush="#D13438" BorderThickness="1"
-                        CornerRadius="20" Padding="14,6" Margin="0,0,8,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="#D13438" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtNgCount" Text="불량 (NG)  0" Foreground="#D13438"
-                                   FontSize="13" FontWeight="SemiBold"/>
-                    </StackPanel>
+                <Border Background="#FFEBEE" BorderBrush="#EF9A9A" BorderThickness="1"
+                        CornerRadius="12" Padding="12,4" Margin="0,0,8,0">
+                    <TextBlock x:Name="TxtNgCount" Text="불량 (NG)  0"
+                               Foreground="#C62828" FontSize="12" FontWeight="Bold"/>
                 </Border>
-                <!-- AD -->
-                <Border Background="#2D220A" BorderBrush="#F7A500" BorderThickness="1"
-                        CornerRadius="20" Padding="14,6" Margin="0,0,8,0">
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="8" Height="8" Fill="#F7A500" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TxtAdCount" Text="대기 (AD)  0" Foreground="#F7A500"
-                                   FontSize="13" FontWeight="SemiBold"/>
-                    </StackPanel>
+                <Border Background="#FFF3E0" BorderBrush="#FFCC80" BorderThickness="1"
+                        CornerRadius="12" Padding="12,4" Margin="0,0,8,0">
+                    <TextBlock x:Name="TxtAdCount" Text="대기 (AD)  0"
+                               Foreground="#E65100" FontSize="12" FontWeight="Bold"/>
                 </Border>
-                <!-- Total -->
-                <Border Background="#1E1E1E" BorderBrush="#3A3A3A" BorderThickness="1"
-                        CornerRadius="20" Padding="14,6">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="TxtTotalCount" Text="합계  0" Foreground="#ABABAB"
-                                   FontSize="13" FontWeight="SemiBold"/>
-                    </StackPanel>
+                <Border Background="#F5F5F5" BorderBrush="#CCCCCC" BorderThickness="1"
+                        CornerRadius="12" Padding="12,4">
+                    <TextBlock x:Name="TxtTotalCount" Text="합계  0"
+                               Foreground="#555555" FontSize="12" FontWeight="Bold"/>
                 </Border>
             </StackPanel>
 
-            <!-- Lot List DataGrid -->
-            <Border Grid.Row="1" Margin="20,0,20,0" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="6">
-                <DataGrid x:Name="LotGrid"
-                          Style="{StaticResource FluentDataGrid}"
-                          ColumnHeaderStyle="{StaticResource FluentColumnHeader}"
-                          RowStyle="{StaticResource FluentDataGridRow}"
-                          CellStyle="{StaticResource FluentDataGridCell}"
-                          BorderThickness="0">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="순번"      Binding="{Binding Sequence}"        Width="60"  MinWidth="50"/>
-                        <DataGridTextColumn Header="물류 바코드" Binding="{Binding MaterialBarcode}" Width="160" MinWidth="120"/>
-                        <DataGridTextColumn Header="Lot 바코드" Binding="{Binding LotBarcode}"      Width="*"   MinWidth="200"/>
-                        <DataGridTextColumn Header="Lot Ser"  Binding="{Binding LotSer}"           Width="80"  MinWidth="70"/>
-                        <DataGridTemplateColumn Header="검사결과" Width="90" MinWidth="80">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Border x:Name="badge" CornerRadius="4" Padding="8,3"
-                                            HorizontalAlignment="Left" VerticalAlignment="Center"
-                                            Background="#2A2A2A">
-                                        <TextBlock x:Name="resultText" Text="{Binding ResultText}"
-                                                   FontSize="12" FontWeight="SemiBold" Foreground="#888888"/>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding ResultText}" Value="OK">
-                                            <Setter TargetName="badge"      Property="Background" Value="#0A2D1A"/>
-                                            <Setter TargetName="resultText" Property="Foreground" Value="#0DAE65"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding ResultText}" Value="NG">
-                                            <Setter TargetName="badge"      Property="Background" Value="#2D0A0A"/>
-                                            <Setter TargetName="resultText" Property="Foreground" Value="#D13438"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding ResultText}" Value="AD">
-                                            <Setter TargetName="badge"      Property="Background" Value="#2D220A"/>
-                                            <Setter TargetName="resultText" Property="Foreground" Value="#F7A500"/>
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
-
-            <!-- Section Title: Injection Conditions -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="20,14,20,6">
-                <Rectangle Width="3" Height="14" Fill="#0078D4" RadiusX="1.5" RadiusY="1.5" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Text="사출 조건" Foreground="#ABABAB" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            </StackPanel>
-
-            <!-- Injection Conditions DataGrid -->
-            <Border Grid.Row="3" Margin="20,0,20,16" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="6">
-                <DataGrid x:Name="InjGrid"
-                          Style="{StaticResource FluentDataGrid}"
-                          ColumnHeaderStyle="{StaticResource FluentColumnHeader}"
-                          RowStyle="{StaticResource FluentDataGridRow}"
-                          CellStyle="{StaticResource FluentDataGridCell}"
-                          RowHeight="36"
-                          ColumnHeaderHeight="36"
-                          BorderThickness="0">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="항목"  Binding="{Binding ParameterName}" Width="160" MinWidth="120"/>
-                        <DataGridTextColumn Header="단위"  Binding="{Binding Unit}"           Width="60"  MinWidth="50"/>
-                        <DataGridTextColumn Header="노즐"  Binding="{Binding Nozzle}"         Width="*"   MinWidth="60"/>
-                        <DataGridTextColumn Header="H1"   Binding="{Binding H1}"             Width="*"   MinWidth="60"/>
-                        <DataGridTextColumn Header="H2"   Binding="{Binding H2}"             Width="*"   MinWidth="60"/>
-                        <DataGridTextColumn Header="H3"   Binding="{Binding H3}"             Width="*"   MinWidth="60"/>
-                        <DataGridTextColumn Header="H4"   Binding="{Binding H4}"             Width="*"   MinWidth="60"/>
-                        <DataGridTextColumn Header="H5"   Binding="{Binding H5}"             Width="*"   MinWidth="60"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
+            <!-- DataGrid -->
+            <DataGrid Grid.Row="1"
+                      x:Name="LotGrid"
+                      Margin="20,0,20,0"
+                      Style="{StaticResource FluentDataGrid}"
+                      ColumnHeaderStyle="{StaticResource FluentColumnHeader}"
+                      RowStyle="{StaticResource FluentDataGridRow}"
+                      CellStyle="{StaticResource FluentDataGridCell}"
+                      BorderThickness="1"
+                      BorderBrush="#E0E0E0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="순번"       Binding="{Binding Sequence}"        Width="60"/>
+                    <DataGridTextColumn Header="물류 바코드" Binding="{Binding MaterialBarcode}" Width="160"/>
+                    <DataGridTextColumn Header="Lot 바코드" Binding="{Binding LotBarcode}"      Width="*"/>
+                    <DataGridTextColumn Header="Lot Ser"   Binding="{Binding LotSer}"           Width="80"/>
+                    <DataGridTemplateColumn Header="검사결과" Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock x:Name="txt" Text="{Binding ResultText}"
+                                           FontWeight="Bold" Foreground="#888888"
+                                           VerticalAlignment="Center"/>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding ResultText}" Value="OK">
+                                        <Setter TargetName="txt" Property="Foreground" Value="#2E7D32"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ResultText}" Value="NG">
+                                        <Setter TargetName="txt" Property="Foreground" Value="#C62828"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ResultText}" Value="AD">
+                                        <Setter TargetName="txt" Property="Foreground" Value="#E65100"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
         </Grid>
 
-        <!-- ── Footer ────────────────────────────────────────── -->
-        <Border Grid.Row="3" Background="#202020" BorderBrush="#2E2E2E" BorderThickness="0,1,0,0" Padding="20,12">
+        <!-- ── 사출 조건 제목 ── -->
+        <Border Grid.Row="3" Background="#F5F5F5" BorderBrush="#E0E0E0"
+                BorderThickness="0,1,0,1" Padding="20,8">
+            <TextBlock Text="사출 조건" FontSize="13" FontWeight="Bold" Foreground="#555555"/>
+        </Border>
+
+        <!-- ── 사출 조건 표 ── -->
+        <DataGrid Grid.Row="4"
+                  x:Name="InjGrid"
+                  Margin="20,0,20,0"
+                  Style="{StaticResource FluentDataGrid}"
+                  ColumnHeaderStyle="{StaticResource FluentColumnHeader}"
+                  RowStyle="{StaticResource FluentDataGridRow}"
+                  CellStyle="{StaticResource FluentDataGridCell}"
+                  RowHeight="32" ColumnHeaderHeight="34"
+                  BorderThickness="1"
+                  BorderBrush="#E0E0E0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="항목"  Binding="{Binding ParameterName}" Width="160"/>
+                <DataGridTextColumn Header="단위"  Binding="{Binding Unit}"           Width="60"/>
+                <DataGridTextColumn Header="노즐"  Binding="{Binding Nozzle}"         Width="*"/>
+                <DataGridTextColumn Header="H1"   Binding="{Binding H1}"             Width="*"/>
+                <DataGridTextColumn Header="H2"   Binding="{Binding H2}"             Width="*"/>
+                <DataGridTextColumn Header="H3"   Binding="{Binding H3}"             Width="*"/>
+                <DataGridTextColumn Header="H4"   Binding="{Binding H4}"             Width="*"/>
+                <DataGridTextColumn Header="H5"   Binding="{Binding H5}"             Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ── 푸터 ── -->
+        <Border Grid.Row="5" Background="#F8F8F8" BorderBrush="#E0E0E0"
+                BorderThickness="0,1,0,0" Padding="20,10">
             <Button Content="닫기" Click="CloseBtn_Click"
                     Style="{StaticResource FluentButton}"
                     HorizontalAlignment="Right"

@@ -8,13 +8,13 @@ public enum SystemState { Idle, Ready, Operating, ResultReady }
 
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
-    private string      _barcodeInput       = string.Empty;
-    private bool        _isOperating        = false;
-    private bool        _isLotPublishMode   = true;
-    private SystemState _state              = SystemState.Idle;
+    private string        _barcodeInput     = string.Empty;
+    private bool          _isOperating      = false;
+    private bool          _isLotPublishMode = true;
+    private SystemState   _state            = SystemState.Idle;
     private MaterialInfo? _currentMaterial;
-    private string      _currentDateTimeText = string.Empty;
-    private string      _statusMessage      = "물류 바코드를 스캔하거나 입력하세요.";
+    private string        _currentDateText  = string.Empty;
+    private string        _statusMessage    = "Lot 바코드를 스캔하거나 입력하세요.";
 
     private readonly Timer _clockTimer;
 
@@ -22,16 +22,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         LotEntries = [];
 
-        LookupCommand             = new RelayCommand(ExecuteLookup,             () => !string.IsNullOrWhiteSpace(BarcodeInput));
-        StartPublishCommand       = new RelayCommand(ExecuteStartPublish,       () => State == SystemState.Ready && IsLotPublishMode);
-        StopPublishCommand        = new RelayCommand(ExecuteStopPublish,        () => State == SystemState.Operating);
-        MarkDefectCommand         = new RelayCommand(ExecuteMarkDefect,         () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
+        LookupCommand               = new RelayCommand(ExecuteLookup,               () => !string.IsNullOrWhiteSpace(BarcodeInput));
+        StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready && IsLotPublishMode);
+        StopPublishCommand          = new RelayCommand(ExecuteStopPublish,          () => State == SystemState.Operating);
+        MarkDefectCommand           = new RelayCommand(ExecuteMarkDefect,           () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
         ProductionLotInquiryCommand = new RelayCommand(ExecuteProductionLotInquiry, () => State != SystemState.Idle);
-        SaveResultCommand         = new RelayCommand(ExecuteSaveResult,         () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
-        LotInquiryCommand         = new RelayCommand(ExecuteLotInquiry,         () => State != SystemState.Idle);
-        ToggleModeCommand         = new RelayCommand(ExecuteToggleMode,         () => State != SystemState.Operating);
-        SelectAllCommand          = new RelayCommand(ExecuteSelectAll);
-        DeselectAllCommand        = new RelayCommand(ExecuteDeselectAll);
+        SaveResultCommand           = new RelayCommand(ExecuteSaveResult,           () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
+        LotInquiryCommand           = new RelayCommand(ExecuteLotInquiry,           () => State != SystemState.Idle);
+        ToggleModeCommand           = new RelayCommand(ExecuteToggleMode,           () => State != SystemState.Operating);
+        SelectAllCommand            = new RelayCommand(ExecuteSelectAll);
+        DeselectAllCommand          = new RelayCommand(ExecuteDeselectAll);
 
         UpdateDateTime();
         _clockTimer = new Timer(_ => UpdateDateTime(), null, 1000, 1000);
@@ -54,10 +54,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public bool IsLotPublishMode
     {
         get => _isLotPublishMode;
-        set { SetProperty(ref _isLotPublishMode, value); OnPropertyChanged(nameof(ModeText)); }
+        set { SetProperty(ref _isLotPublishMode, value); OnPropertyChanged(nameof(ModeButtonText)); }
     }
 
-    public string ModeText => IsLotPublishMode ? "Lot 발행 모드" : "Lot 조회 모드";
+    public string ModeButtonText => IsLotPublishMode ? "Lot 발행모드" : "Lot 조회모드";
 
     public SystemState State
     {
@@ -71,10 +71,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         set { SetProperty(ref _currentMaterial, value); }
     }
 
-    public string CurrentDateTimeText
+    public string CurrentDateText
     {
-        get => _currentDateTimeText;
-        set { SetProperty(ref _currentDateTimeText, value); }
+        get => _currentDateText;
+        set { SetProperty(ref _currentDateText, value); }
     }
 
     public string StatusMessage
@@ -113,7 +113,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private void UpdateDateTime()
     {
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
-            CurrentDateTimeText = DateTime.Now.ToString("yyyy-MM-dd  HH:mm:ss"));
+            CurrentDateText = DateTime.Now.ToString("yyyy년 M월 d일"));
     }
 
     public void ExecuteLookupWithValue(string barcode)
@@ -135,16 +135,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         CurrentMaterial = new MaterialInfo
         {
             MaterialBarcode = barcode,
-            ItemCode        = "P-23041-A",
             ProductName     = "플라스틱 커버 어셈블리",
+            ManufactureDate = DateTime.Now.ToString("yyyy-MM-dd"),
+            ContainerQty    = "100",
             LotCode         = "2026031401ABCDE23045678",
-            IssuedQuantity  = 12,
-            Worker          = "홍길동",
+            LastIssuedSer   = "000000",
             WorkDateTime    = DateTime.Now,
         };
 
         LotEntries.Clear();
-        for (int i = 1; i <= 12; i++)
+        for (int i = 1; i <= 13; i++)
         {
             LotEntries.Add(new LotEntry
             {
@@ -157,7 +157,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         RefreshCounts();
         State         = SystemState.Ready;
-        StatusMessage = $"물류 바코드 조회 완료: {barcode}  (총 {LotEntries.Count}개)";
+        StatusMessage = $"조회 완료: {barcode}  (총 {LotEntries.Count}개)";
     }
 
     private void ExecuteStartPublish()
@@ -170,10 +170,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void SimulateSomeResults()
     {
-        // Demo: auto-mark first 4 entries so the grid looks populated
         var entries = LotEntries.Take(4).ToList();
         for (int i = 0; i < entries.Count; i++)
             entries[i].Result = (i == 2) ? InspectionResult.NG : InspectionResult.OK;
+
+        if (CurrentMaterial != null)
+            CurrentMaterial.LastIssuedSer = LotEntries.Take(4).Last().LotSer;
+
         RefreshCounts();
     }
 
@@ -200,7 +203,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void ExecuteSaveResult()
     {
-        StatusMessage = $"결과 저장 완료  (OK: {OkCount}, NG: {NgCount}, AD: {AdCount})";
+        StatusMessage = $"결과 저장 완료  (OK: {OkCount}, NG: {NgCount})";
         State         = SystemState.Idle;
         IsOperating   = false;
     }
@@ -214,15 +217,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage    = IsLotPublishMode ? "Lot 발행 모드로 전환되었습니다." : "Lot 조회 모드로 전환되었습니다.";
     }
 
-    private void ExecuteSelectAll()
-    {
-        foreach (var e in LotEntries) e.IsSelected = true;
-    }
-
-    private void ExecuteDeselectAll()
-    {
-        foreach (var e in LotEntries) e.IsSelected = false;
-    }
+    private void ExecuteSelectAll()   { foreach (var e in LotEntries) e.IsSelected = true; }
+    private void ExecuteDeselectAll() { foreach (var e in LotEntries) e.IsSelected = false; }
 
     public void RefreshCounts()
     {
