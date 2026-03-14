@@ -29,6 +29,12 @@ public partial class MainWindow : Window
             _vm.ExecuteLookupWithValue(TxtBarcode.Text);
     }
 
+    private void TxtMaterialBarcode_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+            _vm.ExecuteLookupByMaterial();
+    }
+
     // ── DataGrid checkbox ────────────────────────────────────────────────────
 
     private void RowCheckBox_Click(object sender, RoutedEventArgs e)

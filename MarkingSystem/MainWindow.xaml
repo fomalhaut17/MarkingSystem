@@ -96,12 +96,11 @@
                     <!-- 물류 바코드 -->
                     <StackPanel Margin="0,0,0,14">
                         <TextBlock Text="물류 바코드" Style="{StaticResource LabelText}"/>
-                        <Border Background="{StaticResource FieldBackground}" Height="38" CornerRadius="2">
-                            <TextBlock Text="{Binding CurrentMaterial.MaterialBarcode, FallbackValue=''}"
-                                       Style="{StaticResource BodyText}"
-                                       Margin="10,0" VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </Border>
+                        <TextBox x:Name="TxtMaterialBarcode"
+                                 Text="{Binding MaterialBarcodeInput, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource FluentTextBox}"
+                                 Height="38"
+                                 KeyDown="TxtMaterialBarcode_KeyDown"/>
                     </StackPanel>
 
                     <!-- 품명 -->

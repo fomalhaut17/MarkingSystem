@@ -8,7 +8,8 @@ public enum SystemState { Idle, Ready, Operating, ResultReady }
 
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
-    private string        _barcodeInput     = string.Empty;
+    private string        _barcodeInput          = string.Empty;
+    private string        _materialBarcodeInput  = string.Empty;
     private bool          _isOperating      = false;
     private bool          _isLotPublishMode = true;
     private SystemState   _state            = SystemState.Idle;
@@ -43,6 +44,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         get => _barcodeInput;
         set { SetProperty(ref _barcodeInput, value); }
+    }
+
+    public string MaterialBarcodeInput
+    {
+        get => _materialBarcodeInput;
+        set { SetProperty(ref _materialBarcodeInput, value); }
     }
 
     public bool IsOperating
@@ -121,6 +128,13 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrWhiteSpace(barcode)) return;
         BarcodeInput = barcode;
         ExecuteLookup();
+    }
+
+    public void ExecuteLookupByMaterial()
+    {
+        if (string.IsNullOrWhiteSpace(MaterialBarcodeInput)) return;
+        LoadMockData(MaterialBarcodeInput.Trim());
+        MaterialBarcodeInput = string.Empty;
     }
 
     private void ExecuteLookup()
