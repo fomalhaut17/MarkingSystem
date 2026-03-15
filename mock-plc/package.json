@@ -1,0 +1,9 @@
+{
+  "name": "marking-system-mock-plc",
+  "version": "1.0.0",
+  "description": "LS XGT FENET Mock PLC Server for Manntek Marking System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

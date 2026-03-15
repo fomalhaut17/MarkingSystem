@@ -17,17 +17,22 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private string        _currentDateText  = string.Empty;
     private string        _statusMessage    = "Lot 바코드를 스캔하거나 입력하세요.";
 
-    private readonly Timer          _clockTimer;
-    private readonly LocalDatabase  _db;
+    private readonly Timer           _clockTimer;
+    private readonly LocalDatabase   _db;
     private readonly WizMesApiClient _api;
+    private readonly PlcClient       _plc;
+    private CancellationTokenSource? _markingCts;
 
-    // TODO: 실서버 전환 시 Base URL을 설정 파일로 이동
+    // TODO: 실서버 전환 시 URL/IP를 설정 파일로 이동
     private const string ApiBaseUrl = "http://localhost:3000/api/marking";
+    private const string PlcHost    = PlcClient.DefaultHost;
+    private const int    PlcPort    = PlcClient.DefaultPort;
 
     public MainViewModel()
     {
         _db  = new LocalDatabase();
         _api = new WizMesApiClient(ApiBaseUrl);
+        _plc = new PlcClient(PlcHost, PlcPort);
         LotEntries = [];
 
         StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
@@ -167,36 +172,93 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage = $"조회 완료: {barcode}  (총 {LotEntries.Count}개)";
     }
 
-    private void ExecuteStartPublish()
+    private async void ExecuteStartPublish()
     {
         IsOperating   = true;
         State         = SystemState.Operating;
-        StatusMessage = "발행 중...  Lot 바코드를 스캔하세요.";
-        SimulateSomeResults();
+        StatusMessage = "PLC 연결 중...";
+
+        _markingCts?.Dispose();
+        _markingCts = new CancellationTokenSource();
+
+        await RunMarkingSessionAsync(_markingCts.Token);
     }
 
-    private void SimulateSomeResults()
+    private async Task RunMarkingSessionAsync(CancellationToken ct)
     {
-        var entries = LotEntries.Take(4).ToList();
-        for (int i = 0; i < entries.Count; i++)
+        if (!await _plc.ConnectAsync(ct))
         {
-            var result = (i == 2) ? InspectionResult.NG : InspectionResult.OK;
-            entries[i].Result = result;
-            _db.InsertIssueLog(entries[i].MaterialBarcode, entries[i].LotBarcode);
-            _db.UpdateInspectionResult(entries[i].LotBarcode, result);
+            StatusMessage = "PLC 연결 실패.  Mock PLC 서버가 실행 중인지 확인하세요.";
+            State         = SystemState.Ready;
+            IsOperating   = false;
+            return;
         }
 
-        if (CurrentMaterial != null)
-            CurrentMaterial.LastIssuedSer = LotEntries.Take(4).Last().LotSer;
+        StatusMessage = $"발행 중...  (총 {LotEntries.Count}개)";
 
-        RefreshCounts();
+        foreach (var entry in LotEntries)
+        {
+            if (ct.IsCancellationRequested) break;
+
+            // 1. Lot 바코드 → PLC 전송
+            if (!await _plc.WriteLotBarcodeAsync(entry.LotBarcode)) break;
+
+            // 2. 발행 시작 명령
+            if (!await _plc.WriteStartCommandAsync()) break;
+
+            // 3. 완료 대기 (최대 10초, 100ms 간격 폴링)
+            var status = PlcStatus.Idle;
+            for (int i = 0; i < 100; i++)
+            {
+                if (ct.IsCancellationRequested) break;
+                await Task.Delay(100, ct).ConfigureAwait(true);
+                status = await _plc.ReadStatusAsync();
+                if (status is PlcStatus.DoneOk or PlcStatus.DoneNg or PlcStatus.Error) break;
+            }
+
+            if (ct.IsCancellationRequested) break;
+
+            // 4. 결과 반영
+            var result = status switch
+            {
+                PlcStatus.DoneOk => InspectionResult.OK,
+                PlcStatus.DoneNg => InspectionResult.NG,
+                _                => InspectionResult.AD,
+            };
+
+            entry.Result = result;
+            _db.InsertIssueLog(entry.MaterialBarcode, entry.LotBarcode);
+            _db.UpdateInspectionResult(entry.LotBarcode, result);
+
+            if (CurrentMaterial != null)
+                CurrentMaterial.LastIssuedSer = entry.LotSer;
+
+            RefreshCounts();
+            StatusMessage = $"발행 중...  {entry.Sequence}/{LotEntries.Count}  ({entry.LotBarcode})";
+
+            // 5. 명령 레지스터 클리어
+            await _plc.ClearCommandAsync();
+        }
+
+        _plc.Disconnect();
+
+        if (!ct.IsCancellationRequested)
+        {
+            IsOperating   = false;
+            State         = SystemState.ResultReady;
+            StatusMessage = $"발행 완료.  OK: {OkCount}, NG: {NgCount}";
+        }
     }
 
     private void ExecuteStopPublish()
     {
+        _markingCts?.Cancel();
+        _plc.WriteStopCommandAsync();   // fire-and-forget (best effort)
+        _plc.Disconnect();
+
         IsOperating   = false;
         State         = SystemState.ResultReady;
-        StatusMessage = "발행 종료.  결과를 저장하거나 검토하세요.";
+        StatusMessage = "발행 정지.  결과를 저장하거나 검토하세요.";
     }
 
     private void ExecuteMarkDefect()
@@ -245,5 +307,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CurrentMaterial));
     }
 
-    public void Dispose() => _clockTimer.Dispose();
+    public void Dispose()
+    {
+        _markingCts?.Dispose();
+        _clockTimer.Dispose();
+        _plc.Dispose();
+    }
 }
