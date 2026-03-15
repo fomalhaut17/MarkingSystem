@@ -11,4 +11,9 @@
 
   </PropertyGroup>
 
+  <ItemGroup>
+    <Resource Include="Fonts\*.ttf" />
+    <Resource Include="Fonts\*.otf" />
+  </ItemGroup>
+
 </Project>

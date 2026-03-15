@@ -8,7 +8,7 @@
         ResizeMode="CanResize"
         Background="White"
         WindowStartupLocation="CenterOwner"
-        FontFamily="NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic">
+        FontFamily="pack://application:,,,/MarkingSystem;component/Fonts/#NanumSquare, 맑은 고딕, Malgun Gothic">
 
     <Window.Resources>
         <ResourceDictionary>

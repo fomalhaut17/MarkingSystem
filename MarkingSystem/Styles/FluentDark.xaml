@@ -4,7 +4,7 @@
     <!-- ═══════════════════════════════════════════════════════
          FONTS
     ═══════════════════════════════════════════════════════ -->
-    <FontFamily x:Key="AppFont">NanumSquare, 나눔스퀘어, Segoe UI Variable, Segoe UI, Malgun Gothic, Arial</FontFamily>
+    <FontFamily x:Key="AppFont">pack://application:,,,/MarkingSystem;component/Fonts/#NanumSquare, 맑은 고딕, Malgun Gothic</FontFamily>
 
     <!-- ═══════════════════════════════════════════════════════
          COLORS  (Light Theme)
