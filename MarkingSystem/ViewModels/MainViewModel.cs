@@ -20,19 +20,28 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly Timer           _clockTimer;
     private readonly LocalDatabase   _db;
     private readonly WizMesApiClient _api;
-    private readonly PlcClient       _plc;
+    private readonly IPlcClient      _plc;
     private CancellationTokenSource? _markingCts;
 
     // TODO: 실서버 전환 시 URL/IP를 설정 파일로 이동
     private const string ApiBaseUrl = "http://localhost:3000/api/marking";
-    private const string PlcHost    = PlcClient.DefaultHost;
-    private const int    PlcPort    = PlcClient.DefaultPort;
+    private const string PlcHost    = XgtRawPlcClient.DefaultHost;
+    private const int    PlcPort    = XgtRawPlcClient.DefaultPort;
+
+    /// <summary>
+    /// PLC 구현체 선택.
+    /// 개발: XgtRawPlcClient (mock-plc/server.js 대상)
+    /// 운영: HslPlcClient    (실 LS XGT PLC 대상, PlcHost를 실 IP로 변경)
+    /// </summary>
+    private static IPlcClient CreatePlcClient() =>
+        new XgtRawPlcClient(PlcHost, PlcPort);
+        // new HslPlcClient(PlcHost);  ← 실 PLC 전환 시 이 줄로 교체
 
     public MainViewModel()
     {
         _db  = new LocalDatabase();
         _api = new WizMesApiClient(ApiBaseUrl);
-        _plc = new PlcClient(PlcHost, PlcPort);
+        _plc = CreatePlcClient();
         LotEntries = [];
 
         StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
