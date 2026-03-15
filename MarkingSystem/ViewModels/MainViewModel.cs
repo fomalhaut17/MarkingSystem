@@ -8,7 +8,6 @@ public enum SystemState { Idle, Ready, Operating, ResultReady }
 
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
-    private string        _barcodeInput          = string.Empty;
     private string        _materialBarcodeInput  = string.Empty;
     private bool          _isOperating      = false;
     private bool          _isLotPublishMode = true;
@@ -23,7 +22,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         LotEntries = [];
 
-        LookupCommand               = new RelayCommand(ExecuteLookup,               () => !string.IsNullOrWhiteSpace(BarcodeInput));
         StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready && IsLotPublishMode);
         StopPublishCommand          = new RelayCommand(ExecuteStopPublish,          () => State == SystemState.Operating);
         MarkDefectCommand           = new RelayCommand(ExecuteMarkDefect,           () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
@@ -39,12 +37,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     // ── Properties ──────────────────────────────────────────────────────────
-
-    public string BarcodeInput
-    {
-        get => _barcodeInput;
-        set { SetProperty(ref _barcodeInput, value); }
-    }
 
     public string MaterialBarcodeInput
     {
@@ -99,7 +91,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     // ── Commands ─────────────────────────────────────────────────────────────
 
-    public ICommand LookupCommand               { get; }
     public ICommand StartPublishCommand         { get; }
     public ICommand StopPublishCommand          { get; }
     public ICommand MarkDefectCommand           { get; }
@@ -113,7 +104,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     // ── Events ───────────────────────────────────────────────────────────────
 
     public event EventHandler? ProductionLotInquiryRequested;
-    public event EventHandler<string>? NotificationRequested;
+    public event EventHandler? LotInquiryRequested;
 
     // ── Private Methods ──────────────────────────────────────────────────────
 
@@ -123,25 +114,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             CurrentDateText = DateTime.Now.ToString("yyyy년 M월 d일"));
     }
 
-    public void ExecuteLookupWithValue(string barcode)
-    {
-        if (string.IsNullOrWhiteSpace(barcode)) return;
-        BarcodeInput = barcode;
-        ExecuteLookup();
-    }
-
     public void ExecuteLookupByMaterial()
     {
         if (string.IsNullOrWhiteSpace(MaterialBarcodeInput)) return;
         LoadMockData(MaterialBarcodeInput.Trim());
         MaterialBarcodeInput = string.Empty;
-    }
-
-    private void ExecuteLookup()
-    {
-        if (string.IsNullOrWhiteSpace(BarcodeInput)) return;
-        LoadMockData(BarcodeInput.Trim());
-        BarcodeInput = string.Empty;
     }
 
     private void LoadMockData(string barcode)
@@ -226,7 +203,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     private void ExecuteLotInquiry()
-        => NotificationRequested?.Invoke(this, "Lot 조회 기능은 wizMES 연동 후 사용 가능합니다.");
+        => LotInquiryRequested?.Invoke(this, EventArgs.Empty);
 
     private void ExecuteToggleMode()
     {

@@ -18,16 +18,10 @@ public partial class MainWindow : Window
         DataContext = _vm;
 
         _vm.ProductionLotInquiryRequested += OnProductionLotInquiryRequested;
-        _vm.NotificationRequested         += OnNotificationRequested;
+        _vm.LotInquiryRequested           += OnLotInquiryRequested;
     }
 
     // ── Barcode input ────────────────────────────────────────────────────────
-
-    private void TxtBarcode_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter)
-            _vm.ExecuteLookupWithValue(TxtBarcode.Text);
-    }
 
     private void TxtMaterialBarcode_KeyDown(object sender, KeyEventArgs e)
     {
@@ -63,6 +57,10 @@ public partial class MainWindow : Window
         dlg.ShowDialog();
     }
 
-    private void OnNotificationRequested(object? sender, string message)
-        => MessageBox.Show(message, "안내", MessageBoxButton.OK, MessageBoxImage.Information);
+    private void OnLotInquiryRequested(object? sender, EventArgs e)
+    {
+        var dlg = new LotInquiryDialog { Owner = this };
+        dlg.ShowDialog();
+    }
+
 }

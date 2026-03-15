@@ -41,29 +41,13 @@
                        Style="{StaticResource TitleText}"
                        VerticalAlignment="Center"/>
 
-            <!-- 툴바: Lot 바코드 입력 + 버튼 -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Lot 바코드"
-                           FontSize="14" FontWeight="Bold"
-                           Foreground="#333333"
-                           VerticalAlignment="Center"
-                           Margin="0,0,12,0"/>
-                <TextBox x:Name="TxtBarcode"
-                         Text="{Binding BarcodeInput, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource FluentTextBox}"
-                         Width="240" Height="40"
-                         KeyDown="TxtBarcode_KeyDown"/>
-                <Button Content="Lot 조회"
-                        Command="{Binding LookupCommand}"
-                        Style="{StaticResource ToolbarYellowButton}"
-                        Height="40" Padding="20,0"
-                        Margin="8,0,0,0"/>
-                <Button Content="{Binding ModeButtonText}"
-                        Command="{Binding ToggleModeCommand}"
-                        Style="{StaticResource ToolbarBlueButton}"
-                        Height="40" Padding="20,0"
-                        Margin="8,0,0,0"/>
-            </StackPanel>
+            <!-- 툴바: Lot 발행 모드 버튼 -->
+            <Button Grid.Column="2"
+                    Content="{Binding ModeButtonText}"
+                    Command="{Binding ToggleModeCommand}"
+                    Style="{StaticResource ToolbarBlueButton}"
+                    Height="40" Padding="20,0"
+                    VerticalAlignment="Center"/>
 
             <!-- 날짜 -->
             <TextBlock Grid.Column="4"
@@ -294,6 +278,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- 발행 시작 -->
@@ -314,14 +299,20 @@
                     Command="{Binding MarkDefectCommand}"
                     Style="{StaticResource LargeYellowButton}"/>
 
-            <!-- 생산 Lot 조회 -->
+            <!-- Lot 조회 -->
             <Button Grid.Column="3"
+                    Content="Lot 조회"
+                    Command="{Binding LotInquiryCommand}"
+                    Style="{StaticResource LargeYellowButton}"/>
+
+            <!-- 생산 Lot 조회 -->
+            <Button Grid.Column="4"
                     Content="생산 Lot 조회"
                     Command="{Binding ProductionLotInquiryCommand}"
                     Style="{StaticResource LargeYellowButton}"/>
 
             <!-- 결과 저장 -->
-            <Button Grid.Column="4"
+            <Button Grid.Column="5"
                     Content="결과 저장"
                     Command="{Binding SaveResultCommand}"
                     Style="{StaticResource LargeActionButton}"
