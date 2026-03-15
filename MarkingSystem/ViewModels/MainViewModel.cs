@@ -1,4 +1,5 @@
 using MarkingSystem.Models;
+using MarkingSystem.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
@@ -15,10 +16,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private string        _currentDateText  = string.Empty;
     private string        _statusMessage    = "Lot 바코드를 스캔하거나 입력하세요.";
 
-    private readonly Timer _clockTimer;
+    private readonly Timer         _clockTimer;
+    private readonly LocalDatabase _db;
 
     public MainViewModel()
     {
+        _db = new LocalDatabase();
         LotEntries = [];
 
         StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
@@ -112,14 +115,23 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void LoadMockData(string barcode)
     {
+        // Mock: wizMES에서 가져온 최종발행 Ser
+        const string wizMesSer = "000000";
+        const string lotCode   = "2026031401ABCDE23045678";
+
+        // 로컬 DB 조회 후 큰 값 사용 (§4.3.3)
+        var localSer  = _db.GetLastIssuedSer(lotCode);
+        var lastSer   = string.Compare(localSer, wizMesSer, StringComparison.Ordinal) >= 0
+                        ? localSer : wizMesSer;
+
         CurrentMaterial = new MaterialInfo
         {
             MaterialBarcode     = barcode,
             ProductName         = "플라스틱 커버 어셈블리",
             ManufactureDate     = DateTime.Now.ToString("yyyy-MM-dd"),
             ContainerQty        = "100",
-            LotCode             = "2026031401ABCDE23045678",
-            LastIssuedSer       = "000000",
+            LotCode             = lotCode,
+            LastIssuedSer       = lastSer,
             ProductionEquipment = "사출기-01",
             ProductionMold      = "금형-A",
             LotProductionQty    = "500",
@@ -155,7 +167,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         var entries = LotEntries.Take(4).ToList();
         for (int i = 0; i < entries.Count; i++)
-            entries[i].Result = (i == 2) ? InspectionResult.NG : InspectionResult.OK;
+        {
+            var result = (i == 2) ? InspectionResult.NG : InspectionResult.OK;
+            entries[i].Result = result;
+            _db.InsertIssueLog(entries[i].MaterialBarcode, entries[i].LotBarcode);
+            _db.UpdateInspectionResult(entries[i].LotBarcode, result);
+        }
 
         if (CurrentMaterial != null)
             CurrentMaterial.LastIssuedSer = LotEntries.Take(4).Last().LotSer;
@@ -176,6 +193,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             entry.Result     = InspectionResult.NG;
             entry.IsSelected = false;
+            _db.UpdateInspectionResult(entry.LotBarcode, InspectionResult.NG);
         }
         RefreshCounts();
         StatusMessage = "선택된 항목을 불량(NG) 처리했습니다.";
@@ -186,6 +204,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void ExecuteSaveResult()
     {
+        if (CurrentMaterial != null)
+            _db.SetResultSaved(CurrentMaterial.MaterialBarcode);
+
         StatusMessage = $"결과 저장 완료  (OK: {OkCount}, NG: {NgCount})";
         State         = SystemState.Idle;
         IsOperating   = false;
