@@ -9,6 +9,12 @@
     <AssemblyName>MarkingSystem</AssemblyName>
     <RootNamespace>MarkingSystem</RootNamespace>
 
+    <!-- 배포용: exe 하나에 모든 것 포함 -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
   </PropertyGroup>
 
   <ItemGroup>
