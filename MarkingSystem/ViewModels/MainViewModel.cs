@@ -10,7 +10,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 {
     private string        _materialBarcodeInput  = string.Empty;
     private bool          _isOperating      = false;
-    private bool          _isLotPublishMode = true;
     private SystemState   _state            = SystemState.Idle;
     private MaterialInfo? _currentMaterial;
     private string        _currentDateText  = string.Empty;
@@ -22,13 +21,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         LotEntries = [];
 
-        StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready && IsLotPublishMode);
+        StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
         StopPublishCommand          = new RelayCommand(ExecuteStopPublish,          () => State == SystemState.Operating);
         MarkDefectCommand           = new RelayCommand(ExecuteMarkDefect,           () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
         ProductionLotInquiryCommand = new RelayCommand(ExecuteProductionLotInquiry, () => State != SystemState.Idle);
         SaveResultCommand           = new RelayCommand(ExecuteSaveResult,           () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
         LotInquiryCommand           = new RelayCommand(ExecuteLotInquiry,           () => State != SystemState.Idle);
-        ToggleModeCommand           = new RelayCommand(ExecuteToggleMode,           () => State != SystemState.Operating);
         SelectAllCommand            = new RelayCommand(ExecuteSelectAll);
         DeselectAllCommand          = new RelayCommand(ExecuteDeselectAll);
 
@@ -49,14 +47,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         get => _isOperating;
         set { SetProperty(ref _isOperating, value); }
     }
-
-    public bool IsLotPublishMode
-    {
-        get => _isLotPublishMode;
-        set { SetProperty(ref _isLotPublishMode, value); OnPropertyChanged(nameof(ModeButtonText)); }
-    }
-
-    public string ModeButtonText => IsLotPublishMode ? "Lot 발행모드" : "Lot 조회모드";
 
     public SystemState State
     {
@@ -97,7 +87,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public ICommand ProductionLotInquiryCommand { get; }
     public ICommand SaveResultCommand           { get; }
     public ICommand LotInquiryCommand           { get; }
-    public ICommand ToggleModeCommand           { get; }
     public ICommand SelectAllCommand            { get; }
     public ICommand DeselectAllCommand          { get; }
 
@@ -204,12 +193,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void ExecuteLotInquiry()
         => LotInquiryRequested?.Invoke(this, EventArgs.Empty);
-
-    private void ExecuteToggleMode()
-    {
-        IsLotPublishMode = !IsLotPublishMode;
-        StatusMessage    = IsLotPublishMode ? "Lot 발행 모드로 전환되었습니다." : "Lot 조회 모드로 전환되었습니다.";
-    }
 
     private void ExecuteSelectAll()   { foreach (var e in LotEntries) e.IsSelected = true; }
     private void ExecuteDeselectAll() { foreach (var e in LotEntries) e.IsSelected = false; }

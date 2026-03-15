@@ -30,8 +30,6 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>  <!-- 앱 제목 -->
                 <ColumnDefinition Width="*"/>     <!-- 여백    -->
-                <ColumnDefinition Width="Auto"/>  <!-- 툴바    -->
-                <ColumnDefinition Width="*"/>     <!-- 여백    -->
                 <ColumnDefinition Width="Auto"/>  <!-- 날짜    -->
             </Grid.ColumnDefinitions>
 
@@ -41,16 +39,8 @@
                        Style="{StaticResource TitleText}"
                        VerticalAlignment="Center"/>
 
-            <!-- 툴바: Lot 발행 모드 버튼 -->
-            <Button Grid.Column="2"
-                    Content="{Binding ModeButtonText}"
-                    Command="{Binding ToggleModeCommand}"
-                    Style="{StaticResource ToolbarBlueButton}"
-                    Height="40" Padding="20,0"
-                    VerticalAlignment="Center"/>
-
             <!-- 날짜 -->
-            <TextBlock Grid.Column="4"
+            <TextBlock Grid.Column="2"
                        Text="{Binding CurrentDateText}"
                        FontSize="14" FontWeight="Bold"
                        Foreground="#333333"
