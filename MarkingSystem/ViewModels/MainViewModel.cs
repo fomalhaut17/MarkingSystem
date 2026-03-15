@@ -1,6 +1,7 @@
 using MarkingSystem.Models;
 using MarkingSystem.Services;
 using System.Collections.ObjectModel;
+using System.Net.Http;
 using System.Windows.Input;
 
 namespace MarkingSystem.ViewModels;
@@ -16,12 +17,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private string        _currentDateText  = string.Empty;
     private string        _statusMessage    = "Lot 바코드를 스캔하거나 입력하세요.";
 
-    private readonly Timer         _clockTimer;
-    private readonly LocalDatabase _db;
+    private readonly Timer          _clockTimer;
+    private readonly LocalDatabase  _db;
+    private readonly WizMesApiClient _api;
+
+    // TODO: 실서버 전환 시 Base URL을 설정 파일로 이동
+    private const string ApiBaseUrl = "http://localhost:3000/api/marking";
 
     public MainViewModel()
     {
-        _db = new LocalDatabase();
+        _db  = new LocalDatabase();
+        _api = new WizMesApiClient(ApiBaseUrl);
         LotEntries = [];
 
         StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
@@ -106,46 +112,52 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             CurrentDateText = DateTime.Now.ToString("yyyy년 M월 d일"));
     }
 
-    public void ExecuteLookupByMaterial()
+    public async void ExecuteLookupByMaterial()
     {
         if (string.IsNullOrWhiteSpace(MaterialBarcodeInput)) return;
-        LoadMockData(MaterialBarcodeInput.Trim());
+
+        var barcode = MaterialBarcodeInput.Trim();
         MaterialBarcodeInput = string.Empty;
+
+        StatusMessage = $"조회 중...  ({barcode})";
+
+        try
+        {
+            var material = await _api.GetMaterialAsync(barcode);
+            if (material == null)
+            {
+                StatusMessage = $"조회 실패: 물류 바코드를 찾을 수 없습니다.  ({barcode})";
+                return;
+            }
+
+            ApplyMaterial(barcode, material);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"API 오류: {ex.Message}";
+        }
     }
 
-    private void LoadMockData(string barcode)
+    private void ApplyMaterial(string barcode, MaterialInfo material)
     {
-        // Mock: wizMES에서 가져온 최종발행 Ser
-        const string wizMesSer = "000000";
-        const string lotCode   = "2026031401ABCDE23045678";
+        // 로컬 DB 조회 후 큰 값 사용 (§4.3.3, §5.3)
+        var localSer = _db.GetLastIssuedSer(material.LotCode);
+        var lastSer  = string.Compare(localSer, material.LastIssuedSer, StringComparison.Ordinal) >= 0
+                       ? localSer : material.LastIssuedSer;
 
-        // 로컬 DB 조회 후 큰 값 사용 (§4.3.3)
-        var localSer  = _db.GetLastIssuedSer(lotCode);
-        var lastSer   = string.Compare(localSer, wizMesSer, StringComparison.Ordinal) >= 0
-                        ? localSer : wizMesSer;
-
-        CurrentMaterial = new MaterialInfo
-        {
-            MaterialBarcode     = barcode,
-            ProductName         = "플라스틱 커버 어셈블리",
-            ManufactureDate     = DateTime.Now.ToString("yyyy-MM-dd"),
-            ContainerQty        = "100",
-            LotCode             = lotCode,
-            LastIssuedSer       = lastSer,
-            ProductionEquipment = "사출기-01",
-            ProductionMold      = "금형-A",
-            LotProductionQty    = "500",
-            WorkDateTime        = DateTime.Now,
-        };
+        material.MaterialBarcode = barcode;
+        material.LastIssuedSer   = lastSer;
+        material.WorkDateTime    = DateTime.Now;
+        CurrentMaterial          = material;
 
         LotEntries.Clear();
-        for (int i = 1; i <= 13; i++)
+        for (int i = 1; i <= int.Parse(material.ContainerQty); i++)
         {
             LotEntries.Add(new LotEntry
             {
                 Sequence        = i,
                 MaterialBarcode = barcode,
-                LotBarcode      = CurrentMaterial.LotCode + i.ToString("D6"),
+                LotBarcode      = material.LotCode + i.ToString("D6"),
                 Result          = InspectionResult.Pending,
             });
         }
