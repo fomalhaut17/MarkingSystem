@@ -42,16 +42,17 @@ public sealed class LocalDatabase
                     material_barcode  TEXT    NOT NULL,
                     lot_code          TEXT    NOT NULL,
                     lot_ser           TEXT    NOT NULL,
-                    lot_barcode       TEXT    NOT NULL,
                     inspection_result TEXT    NOT NULL DEFAULT 'Pending',
                     is_result_saved   INTEGER NOT NULL DEFAULT 0,
                     created_at        TEXT    NOT NULL,
                     updated_at        TEXT    NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS idx_lot_code
-                    ON issue_log (lot_code);
                 CREATE INDEX IF NOT EXISTS idx_material_barcode
                     ON issue_log (material_barcode);
+                CREATE INDEX IF NOT EXISTS idx_lot_code
+                    ON issue_log (lot_code);
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_lot_code_ser
+                    ON issue_log (lot_code, lot_ser);
                 """;
             cmd.ExecuteNonQuery();
         }
@@ -67,14 +68,13 @@ public sealed class LocalDatabase
         using var cmd  = conn.CreateCommand();
         cmd.CommandText = """
             INSERT INTO issue_log
-                (material_barcode, lot_code, lot_ser, lot_barcode,
+                (material_barcode, lot_code, lot_ser,
                  inspection_result, is_result_saved, created_at, updated_at)
-            VALUES ($mb, $lc, $ls, $lb, 'Pending', 0, $now, $now)
+            VALUES ($mb, $lc, $ls, 'Pending', 0, $now, $now)
             """;
         cmd.Parameters.AddWithValue("$mb",  materialBarcode);
         cmd.Parameters.AddWithValue("$lc",  ParseLotCode(lotBarcode));
         cmd.Parameters.AddWithValue("$ls",  ParseLotSer(lotBarcode));
-        cmd.Parameters.AddWithValue("$lb",  lotBarcode);
         cmd.Parameters.AddWithValue("$now", now);
         cmd.ExecuteNonQuery();
     }
@@ -87,11 +87,12 @@ public sealed class LocalDatabase
         cmd.CommandText = """
             UPDATE issue_log
                SET inspection_result = $result, updated_at = $now
-             WHERE lot_barcode = $lb AND is_result_saved = 0
+             WHERE lot_code = $lc AND lot_ser = $ls AND is_result_saved = 0
             """;
         cmd.Parameters.AddWithValue("$result", result.ToString());
         cmd.Parameters.AddWithValue("$now",    Now());
-        cmd.Parameters.AddWithValue("$lb",     lotBarcode);
+        cmd.Parameters.AddWithValue("$lc",     ParseLotCode(lotBarcode));
+        cmd.Parameters.AddWithValue("$ls",     ParseLotSer(lotBarcode));
         cmd.ExecuteNonQuery();
     }
 
@@ -134,7 +135,7 @@ public sealed class LocalDatabase
         return conn;
     }
 
-    private static string Now()                 => DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+    private static string Now()                  => DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
     private static string ParseLotCode(string s) => s.Length >= 23 ? s[..23] : s;
     private static string ParseLotSer(string s)  => s.Length == 29 ? s[23..] : string.Empty;
 }
