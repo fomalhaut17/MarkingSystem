@@ -121,6 +121,29 @@
         </Setter>
     </Style>
 
+    <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource ToolbarYellowButton}">
+        <Setter Property="Background" Value="#D8D8D8"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#C0C0C0"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="#AAAAAA"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="ToolbarBlueButton" TargetType="Button" BasedOn="{StaticResource ToolbarYellowButton}">
         <Setter Property="Background" Value="{StaticResource BluePrimary}"/>
         <Setter Property="Template">

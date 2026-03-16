@@ -29,6 +29,8 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0"
@@ -36,7 +38,14 @@
                        Style="{StaticResource TitleText}"
                        VerticalAlignment="Center"/>
 
-            <TextBlock Grid.Column="2"
+            <Button Grid.Column="2"
+                    Content="로그아웃"
+                    Command="{Binding LogoutCommand}"
+                    Style="{StaticResource ToolbarButton}"
+                    Height="32" Padding="14,0"
+                    VerticalAlignment="Center"/>
+
+            <TextBlock Grid.Column="4"
                        Text="{Binding CurrentDateText}"
                        FontSize="14" FontWeight="Bold"
                        Foreground="#333333"

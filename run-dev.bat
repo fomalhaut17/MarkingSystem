@@ -11,5 +11,6 @@ start "PLC Mock Server" cmd /k "cd /d %~dp0mock-plc && node server.js"
 
 echo [4/4] Starting Marking System...
 timeout /t 2 /nobreak > nul
-cd /d "%~dp0MarkingSystem"
+pushd "%~dp0MarkingSystem"
 dotnet run
+popd

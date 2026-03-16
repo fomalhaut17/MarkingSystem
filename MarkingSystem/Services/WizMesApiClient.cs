@@ -1,5 +1,6 @@
 using MarkingSystem.Models;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
@@ -7,7 +8,8 @@ namespace MarkingSystem.Services;
 
 /// <summary>
 /// wizMES REST API 클라이언트.
-/// Base URL: appsettings 또는 App.config에서 주입 (현재는 생성자 인자).
+/// 모든 요청에 AuthService에서 발급받은 Bearer 토큰을 자동 첨부한다.
+/// 401 응답 시 토큰 갱신 후 1회 재시도한다.
 /// </summary>
 public sealed class WizMesApiClient
 {
@@ -16,40 +18,77 @@ public sealed class WizMesApiClient
         Timeout = TimeSpan.FromSeconds(10)
     };
 
-    private readonly string _baseUrl;
+    private readonly string      _baseUrl;
+    private readonly AuthService _auth;
 
-    public WizMesApiClient(string baseUrl)
+    public WizMesApiClient(string baseUrl, AuthService auth)
     {
         _baseUrl = baseUrl.TrimEnd('/');
+        _auth    = auth;
     }
 
     // ── API 1: 자재 정보 조회 ─────────────────────────────────────────────────
 
-    /// <summary>
-    /// 물류 바코드로 자재 정보를 조회한다. (§6.3.1)
-    /// 실패 시 null 반환.
-    /// </summary>
     public async Task<MaterialInfo?> GetMaterialAsync(string materialBarcode)
     {
-        var url = $"{_baseUrl}/materials/{Uri.EscapeDataString(materialBarcode)}";
-        var wrapper = await _http.GetFromJsonAsync<ApiResponse<MaterialInfo>>(url);
+        var url     = $"{_baseUrl}/materials/{Uri.EscapeDataString(materialBarcode)}";
+        var wrapper = await SendWithRetryAsync<MaterialInfo>(
+            () => BuildGet(url));
         return wrapper?.Success == true ? wrapper.Data : null;
     }
 
     // ── API 2: 발행 결과 일괄 전송 ───────────────────────────────────────────
 
-    /// <summary>
-    /// 검사 결과 목록을 wizMES에 전송한다. (§6.3.2)
-    /// 성공 시 저장된 건수 반환, 실패 시 0 반환.
-    /// </summary>
     public async Task<int> PostIssueResultsAsync(string materialBarcode, IEnumerable<IssueResultDto> results)
     {
         var body    = new { materialBarcode, results };
-        var response = await _http.PostAsJsonAsync($"{_baseUrl}/issue-results", body);
-        if (!response.IsSuccessStatusCode) return 0;
-
-        var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<IssueResultResponse>>();
+        var wrapper = await SendWithRetryAsync<IssueResultResponse>(
+            () => BuildPost($"{_baseUrl}/issue-results", body));
         return wrapper?.Success == true ? wrapper.Data?.SavedCount ?? 0 : 0;
+    }
+
+    // ── 내부 헬퍼 ────────────────────────────────────────────────────────────
+
+    private HttpRequestMessage BuildGet(string url)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Get, url);
+        AttachToken(req);
+        return req;
+    }
+
+    private HttpRequestMessage BuildPost<T>(string url, T body)
+    {
+        var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(body)
+        };
+        AttachToken(req);
+        return req;
+    }
+
+    private void AttachToken(HttpRequestMessage req)
+    {
+        if (!string.IsNullOrEmpty(_auth.AccessToken))
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _auth.AccessToken);
+    }
+
+    /// <summary>
+    /// 요청 실행 → 401이면 토큰 갱신 후 1회 재시도.
+    /// </summary>
+    private async Task<ApiResponse<T>?> SendWithRetryAsync<T>(Func<HttpRequestMessage> buildRequest)
+    {
+        var response = await _http.SendAsync(buildRequest());
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            var refreshed = await _auth.RefreshAsync();
+            if (!refreshed) return null;
+
+            response = await _http.SendAsync(buildRequest());
+        }
+
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
     }
 }
 
@@ -59,7 +98,7 @@ public sealed record IssueResultDto(
     [property: JsonPropertyName("lotBarcode")]       string LotBarcode,
     [property: JsonPropertyName("inspectionResult")] string InspectionResult);
 
-file sealed class IssueResultResponse
+sealed class IssueResultResponse
 {
     [JsonPropertyName("savedCount")]
     public int SavedCount { get; init; }
@@ -67,14 +106,14 @@ file sealed class IssueResultResponse
 
 // ── 공통 응답 래퍼 ────────────────────────────────────────────────────────────
 
-file sealed class ApiResponse<T>
+sealed class ApiResponse<T>
 {
     [JsonPropertyName("success")] public bool     Success { get; init; }
     [JsonPropertyName("data")]    public T?       Data    { get; init; }
     [JsonPropertyName("error")]   public ApiError? Error  { get; init; }
 }
 
-file sealed class ApiError
+sealed class ApiError
 {
     [JsonPropertyName("code")]    public string? Code    { get; init; }
     [JsonPropertyName("message")] public string? Message { get; init; }

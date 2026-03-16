@@ -1,3 +1,4 @@
+using MarkingSystem.Services;
 using MarkingSystem.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,15 +9,19 @@ namespace MarkingSystem;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private readonly AuthService   _auth;
 
-    public MainWindow()
+    public MainWindow(AuthService auth)
     {
         InitializeComponent();
 
-        _vm = new MainViewModel();
+        _auth = auth;
+        _vm   = new MainViewModel(auth);
         DataContext = _vm;
 
-        _vm.ShowErrorRequested += OnShowErrorRequested;
+        _vm.ShowErrorRequested  += OnShowErrorRequested;
+        _vm.LogoutRequested     += OnLogoutRequested;
+        _auth.LogoutRequested   += OnLogoutRequested;
     }
 
     // ── Barcode input ────────────────────────────────────────────────────────
@@ -51,4 +56,16 @@ public partial class MainWindow : Window
 
     private void OnShowErrorRequested(object? sender, string message)
         => MessageBox.Show(message, "오류", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+    // ── Logout ───────────────────────────────────────────────────────────────
+
+    private void OnLogoutRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _auth.Logout();
+            new LoginWindow(_auth).Show();
+            Close();
+        });
+    }
 }

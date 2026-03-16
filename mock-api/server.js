@@ -20,6 +20,67 @@ function badRequest(res, code, message) {
   res.status(400).json({ success: false, data: null, error: { code, message } })
 }
 
+function unauthorized(res, code, message) {
+  res.status(401).json({ success: false, data: null, error: { code, message } })
+}
+
+// ── 인증 Mock 상태 ────────────────────────────────────────────────────────────
+// 테스트 계정: companyCode=MANNTEK / admin / 1234
+const MOCK_USERS = [
+  { companyCode: 'MANNTEK', username: 'admin', password: '1234' },
+]
+
+// 발급된 refresh token 저장소 (인메모리)
+const refreshTokenStore = new Set()
+
+function makeAccessToken()  { return 'mock-access-'  + Math.random().toString(36).slice(2) }
+function makeRefreshToken() { return 'mock-refresh-' + Math.random().toString(36).slice(2) }
+
+// ── AUTH 1: 로그인  POST /auth/login ─────────────────────────────────────────
+
+server.post('/auth/login', (req, res) => {
+  const { companyCode, username, password } = req.body || {}
+
+  if (!companyCode || !username || !password) {
+    return badRequest(res, 'INVALID_REQUEST', 'companyCode, username, password 가 필요합니다.')
+  }
+
+  const user = MOCK_USERS.find(u => u.companyCode === companyCode && u.username === username && u.password === password)
+  if (!user) {
+    return unauthorized(res, 'INVALID_CREDENTIALS', '업체코드·아이디·비밀번호가 올바르지 않습니다.')
+  }
+
+  const accessToken  = makeAccessToken()
+  const refreshToken = makeRefreshToken()
+  refreshTokenStore.add(refreshToken)
+
+  console.log(`[auth/login] companyCode=${companyCode} username=${username} → tokens issued`)
+  ok(res, { accessToken, refreshToken, expiresIn: 3600 })
+})
+
+// ── AUTH 2: 토큰 갱신  POST /auth/refresh ────────────────────────────────────
+
+server.post('/auth/refresh', (req, res) => {
+  const { refreshToken } = req.body || {}
+
+  if (!refreshToken) {
+    return badRequest(res, 'INVALID_REQUEST', 'refreshToken 이 필요합니다.')
+  }
+
+  if (!refreshTokenStore.has(refreshToken)) {
+    return unauthorized(res, 'INVALID_REFRESH_TOKEN', 'Refresh Token 이 만료되었거나 유효하지 않습니다.')
+  }
+
+  // Rotation: 기존 토큰 폐기 후 새 토큰 발급
+  refreshTokenStore.delete(refreshToken)
+  const newAccessToken  = makeAccessToken()
+  const newRefreshToken = makeRefreshToken()
+  refreshTokenStore.add(newRefreshToken)
+
+  console.log(`[auth/refresh] token rotated`)
+  ok(res, { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 3600 })
+})
+
 // ── API 1: 자재 정보 조회  GET /api/marking/materials/:materialBarcode ─────────
 
 server.get('/api/marking/materials/:materialBarcode', (req, res) => {
@@ -90,8 +151,11 @@ server.get('/api/marking/production-lots/:lotCode', (req, res) => {
 const PORT = 3000
 server.listen(PORT, () => {
   console.log('')
-  console.log('  ✔  wizMES Mock API  →  http://localhost:' + PORT)
-  console.log('  엔드포인트:')
+  console.log('  wizMES Mock API  ->  http://localhost:' + PORT)
+  console.log('  [Auth]')
+  console.log('    POST /auth/login              (admin / 1234)')
+  console.log('    POST /auth/refresh')
+  console.log('  [Marking]')
   console.log('    GET  /api/marking/materials/:materialBarcode')
   console.log('    POST /api/marking/issue-results')
   console.log('    GET  /api/marking/lots?materialBarcode=... | ?lotCode=...')
