@@ -114,6 +114,17 @@ public sealed class LocalDatabase
     // ── 읽기 ─────────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// 미저장(is_result_saved=0) 발행 결과가 하나라도 존재하면 true.
+    /// </summary>
+    public bool HasUnsavedResults()
+    {
+        using var conn = OpenConnection();
+        using var cmd  = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM issue_log WHERE is_result_saved = 0";
+        return (long)(cmd.ExecuteScalar() ?? 0L) > 0;
+    }
+
+    /// <summary>
     /// 특정 LotCode의 로컬 최종발행 Ser 반환.
     /// 기록 없으면 "000000" 반환.
     /// </summary>

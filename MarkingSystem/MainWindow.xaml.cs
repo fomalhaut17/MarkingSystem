@@ -19,6 +19,7 @@ public partial class MainWindow : Window
 
         _vm.ProductionLotInquiryRequested += OnProductionLotInquiryRequested;
         _vm.LotInquiryRequested           += OnLotInquiryRequested;
+        _vm.ShowErrorRequested            += OnShowErrorRequested;
     }
 
     // ── Barcode input ────────────────────────────────────────────────────────
@@ -62,5 +63,8 @@ public partial class MainWindow : Window
         var dlg = new LotInquiryDialog { Owner = this };
         dlg.ShowDialog();
     }
+
+    private void OnShowErrorRequested(object? sender, string message)
+        => MessageBox.Show(message, "오류", MessageBoxButton.OK, MessageBoxImage.Warning);
 
 }

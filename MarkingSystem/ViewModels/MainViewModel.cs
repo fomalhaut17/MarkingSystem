@@ -117,6 +117,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public event EventHandler? ProductionLotInquiryRequested;
     public event EventHandler? LotInquiryRequested;
+    public event EventHandler<string>? ShowErrorRequested;
 
     // ── Private Methods ──────────────────────────────────────────────────────
 
@@ -131,8 +132,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrWhiteSpace(MaterialBarcodeInput)) return;
 
         var barcode = MaterialBarcodeInput.Trim();
-        MaterialBarcodeInput = string.Empty;
 
+        if (CurrentMaterial != null && _db.HasUnsavedResults())
+        {
+            ShowErrorRequested?.Invoke(this,
+                "미저장 발행 결과가 있습니다.\n결과를 저장한 후 다음 물류 바코드를 조회하세요.");
+            return;
+        }
+
+        MaterialBarcodeInput = string.Empty;
         StatusMessage = $"조회 중...  ({barcode})";
 
         try

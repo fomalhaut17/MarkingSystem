@@ -6,7 +6,11 @@
       "Bash(dotnet sln:*)",
       "WebSearch",
       "Bash(cd:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git tag:*)"
     ]
   }
 }
