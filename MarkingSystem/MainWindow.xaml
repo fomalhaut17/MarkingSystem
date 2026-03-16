@@ -11,7 +11,7 @@
         FontFamily="pack://application:,,,/MarkingSystem;component/Fonts/#NanumSquare, 맑은 고딕, Malgun Gothic">
 
     <Window.Resources>
-        <ResourceDictionary Source="Styles/FluentDark.xaml"/>
+        <ResourceDictionary Source="Styles/FluentLight.xaml"/>
     </Window.Resources>
 
     <Grid Background="White">
@@ -202,7 +202,7 @@
                     <!-- 물류 바코드 -->
                     <DataGridTextColumn Header="물류 바코드"
                                        Binding="{Binding MaterialBarcode}"
-                                       Width="200" MinWidth="130">
+                                       Width="2*" MinWidth="130">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
@@ -215,12 +215,11 @@
                     <!-- Lot 바코드 -->
                     <DataGridTextColumn Header="Lot 바코드"
                                        Binding="{Binding LotBarcode}"
-                                       Width="*" MinWidth="240">
+                                       Width="3*" MinWidth="200">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="VerticalAlignment" Value="Center"/>
-                                <Setter Property="FontFamily"        Value="Consolas, Courier New, Malgun Gothic"/>
-                                <Setter Property="FontSize"          Value="13"/>
+                                <Setter Property="FontSize"          Value="14"/>
                                 <Setter Property="TextTrimming"      Value="CharacterEllipsis"/>
                             </Style>
                         </DataGridTextColumn.ElementStyle>

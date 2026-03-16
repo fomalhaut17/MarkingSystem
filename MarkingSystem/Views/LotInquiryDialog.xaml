@@ -13,7 +13,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Styles/FluentDark.xaml"/>
+                <ResourceDictionary Source="../Styles/FluentLight.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
@@ -72,10 +72,28 @@
                   Margin="16,12,16,0">
             <DataGrid.Columns>
 
+                <!-- 체크박스 -->
+                <DataGridTemplateColumn Width="50">
+                    <DataGridTemplateColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <CheckBox Style="{StaticResource FluentCheckBox}"
+                                      HorizontalAlignment="Center"
+                                      Click="HeaderCheckBox_Click"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.HeaderTemplate>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox Style="{StaticResource FluentCheckBox}"
+                                      IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                      HorizontalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
                 <!-- 물류 바코드 -->
                 <DataGridTextColumn Header="물류 바코드"
                                    Binding="{Binding MaterialBarcode}"
-                                   Width="220" MinWidth="140">
+                                   Width="200" MinWidth="130">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -88,12 +106,11 @@
                 <!-- Lot 바코드 -->
                 <DataGridTextColumn Header="Lot 바코드"
                                    Binding="{Binding LotBarcode}"
-                                   Width="*" MinWidth="240">
+                                   Width="300" MinWidth="200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Setter Property="FontFamily"        Value="Consolas, Courier New, Malgun Gothic"/>
-                            <Setter Property="FontSize"          Value="13"/>
+                            <Setter Property="FontSize"          Value="14"/>
                             <Setter Property="TextTrimming"      Value="CharacterEllipsis"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
@@ -130,6 +147,12 @@
 
         <!-- ── 하단 버튼 ── -->
         <Grid Grid.Row="4" Margin="24,0">
+            <Button x:Name="BtnMarkDefect"
+                    Content="불량 처리"
+                    Style="{StaticResource LargeYellowButton}"
+                    Width="120" Height="60"
+                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Click="MarkDefectBtn_Click"/>
             <Button Content="종료"
                     Style="{StaticResource LargeYellowButton}"
                     Width="120" Height="60"

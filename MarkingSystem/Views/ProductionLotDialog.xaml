@@ -13,7 +13,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Styles/FluentDark.xaml"/>
+                <ResourceDictionary Source="../Styles/FluentLight.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- ── 사출 조건 표 셀 스타일 ── -->
