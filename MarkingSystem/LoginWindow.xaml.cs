@@ -61,7 +61,7 @@ public partial class LoginWindow : Window
             return;
         }
 
-        var main = new MainWindow(_auth);
+        var main = new MainWindow(_auth, App.Settings);
         main.Show();
         Close();
     }

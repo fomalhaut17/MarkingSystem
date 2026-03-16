@@ -1,10 +1,11 @@
 @echo off
 echo [1/4] Installing mock API packages...
-cd /d "%~dp0mock-api"
+pushd "%~dp0mock-api"
 call npm install --silent
+popd
 
 echo [2/4] Starting Mock API server (HTTP :3000)...
-start "wizMES Mock API" cmd /k "node server.js"
+start "wizMES Mock API" cmd /k "cd /d %~dp0mock-api && node server.js"
 
 echo [3/4] Starting Mock PLC server (TCP :2004)...
 start "PLC Mock Server" cmd /k "cd /d %~dp0mock-plc && node server.js"

@@ -5,8 +5,9 @@ public enum PlcStatus { Idle = 0, Marking = 1, DoneOk = 2, DoneNg = 3, Error = 9
 
 /// <summary>
 /// PLC 통신 추상화.
-/// 개발: XgtRawPlcClient (직접 구현, Mock 서버와 통신)
-/// 운영: HslPlcClient (HslCommunication, 실 LS XGT PLC와 통신)
+/// TCP  모드: XgtRawPlcClient  (FENET 프로토콜, Mock PLC / 이더넷 모듈 장착 PLC)
+/// Serial 모드: CnetSerialPlcClient (Cnet 프로토콜, RS-232, LS XBC-DN64H 실 PLC)
+/// appsettings.json의 Plc.Mode 값으로 PlcClientFactory가 구현체를 선택한다.
 /// </summary>
 public interface IPlcClient : IDisposable
 {

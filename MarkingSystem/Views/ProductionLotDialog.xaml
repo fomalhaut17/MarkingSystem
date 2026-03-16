@@ -62,7 +62,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="Lot 바코드"
+            <TextBlock Grid.Column="0" Text="Lot 코드"
                        FontSize="13" Foreground="#333333"
                        VerticalAlignment="Center" Margin="0,0,12,0"/>
 
@@ -91,11 +91,10 @@
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="20,20,20,20">
 
-                    <TextBlock Text="Lot 바코드" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
+                    <TextBlock Text="Lot 코드" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
                     <TextBox x:Name="TxtLotBarcode"
                              Style="{StaticResource FluentTextBox}"
-                             IsReadOnly="True" Height="34" Margin="0,0,0,6"/>
-                    <ComboBox x:Name="CmbLotHistory" Height="30" Margin="0,0,0,20"/>
+                             IsReadOnly="True" Height="34" Margin="0,0,0,20"/>
 
                     <TextBlock Text="품명" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
                     <TextBox x:Name="TxtProductName"
@@ -120,7 +119,37 @@
                     <TextBlock Text="Lot 생산 수량" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
                     <TextBox x:Name="TxtLotProductionQty"
                              Style="{StaticResource FluentTextBox}"
-                             IsReadOnly="True" Height="34"/>
+                             IsReadOnly="True" Height="34" Margin="0,0,0,20"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="양품" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
+                            <TextBox x:Name="TxtOkCount"
+                                     Background="{StaticResource FieldBackground}"
+                                     IsReadOnly="True" Height="34"
+                                     FontSize="15" FontWeight="Bold"
+                                     Foreground="#2E7D32"
+                                     VerticalContentAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     BorderThickness="0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="불량" FontSize="13" Foreground="#555555" Margin="0,0,0,4"/>
+                            <TextBox x:Name="TxtNgCount"
+                                     Background="{StaticResource FieldBackground}"
+                                     IsReadOnly="True" Height="34"
+                                     FontSize="15" FontWeight="Bold"
+                                     Foreground="#C62828"
+                                     VerticalContentAlignment="Center"
+                                     HorizontalContentAlignment="Center"
+                                     BorderThickness="0"/>
+                        </StackPanel>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
 

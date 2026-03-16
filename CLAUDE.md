@@ -1,7 +1,7 @@
 # 만텍 각인 시스템 (Marking System)
 
 ## 프로젝트 개요
-LS XGT PLC와 TCP 통신하여 Lot 바코드를 각인하는 WPF 데스크탑 앱.
+LS XBC-DN64H PLC와 통신하여 Lot 바코드를 각인하는 WPF 데스크탑 앱.
 고객사 내부 사용 목적 (외부 판매 아님).
 
 ## 기술 스택
@@ -20,29 +20,29 @@ run-dev.bat
 ## 외부 연동 전환 방법
 | 항목 | 파일 | 변경 위치 |
 |---|---|---|
-| wizMES API | `MainViewModel.cs` | `ApiBaseUrl` 상수 |
-| PLC IP | `MainViewModel.cs` | `PlcHost` 상수 |
-| PLC 구현체 | `MainViewModel.cs` | `CreatePlcClient()` 팩토리 메서드 |
+| wizMES API URL | `appsettings.json` | `Api.BaseUrl` |
+| 인증 API URL | `appsettings.json` | `Api.AuthBaseUrl` |
+| PLC 통신 방식 | `appsettings.json` | `Plc.Mode` (`Tcp` / `Serial`) |
+| PLC TCP 주소 | `appsettings.json` | `Plc.Tcp.Host`, `Plc.Tcp.Port` |
+| PLC 시리얼 포트 | `appsettings.json` | `Plc.Serial.PortName`, `BaudRate`, `StationNo` |
 
 ## PLC 통신 구조
-- 프로토콜: LS XGT FENET, TCP 2004포트, 직접 구현 (`XgtRawPlcClient`)
-- 인터페이스: `IPlcClient` — 구현체 교체 대비
-- 메모리 맵:
+- **모델**: LS XBC-DN64H (확정, 2026-03-16), 이더넷 미지원 → RS-232 필요
+- **구현체 선택**: `appsettings.json`의 `Plc.Mode` 값으로 런타임 분기 (`PlcClientFactory`)
+  - `"Tcp"` (기본값) → `XgtRawPlcClient` — FENET 프로토콜, Mock PLC / 이더넷 모듈 장착 PLC
+  - `"Serial"` → `CnetSerialPlcClient` — XGT Cnet 프로토콜, 실 PLC RS-232 직접 연결
+- **인터페이스**: `IPlcClient` — Connect/Disconnect/WriteLotBarcode/WriteStart/WriteStop/ReadStatus
+- **메모리 맵** (두 구현체 공통):
   - `%MW100~%MW114` — Lot 바코드 (15 word = 30 bytes ASCII)
   - `%MW116` — 명령 (0=None, 1=Start, 2=Stop)
   - `%MW117` — 상태 (0=Idle, 1=Marking, 2=DoneOK, 3=DoneNG, 9=Error)
-- 각인 흐름: `WriteLotBarcode → WriteStart → Poll(%MW117) → ClearCommand`
+- **각인 흐름**: `WriteLotBarcode → WriteStart → Poll(%MW117) → ClearCommand`
+- **Cnet 참조 문서**: `사용설명서_XGB Cnet_국문_V2.3_20251124.pdf` §7 (프레임 구조 + 명령어 상세)
 
 ## PLC 라이브러리 채택 이력 (변경 전 확인)
 - **HslCommunication** — 상업적 내부 사용도 유료 가능성 → 제외
 - **XGCommLib** — 32비트 COM, win-x64 SingleFile과 충돌 → 제외
-- **현재**: 직접 구현 유지. 실 PLC 최초 연결 시 Wireshark로 응답 프레임 검증 필요
-
-## 실 PLC 연결 시 Wireshark 검증 항목
-1. 응답 앞에 커맨드 에코(0x0055) 바이트 유무
-2. 에러 코드 크기 (2바이트 vs 4바이트)
-3. Write 후 응답 유무 (없으면 타임아웃 → `RecvAppDataAsync` 수정 필요)
-4. 헤더 [14] 방향 바이트 (PLC→Host 응답 시 0x11 여부)
+- **현재**: 직접 구현 2종 유지 (`XgtRawPlcClient` TCP + `CnetSerialPlcClient` RS-232)
 
 ## 코드 규칙
 - MVVM: ViewModel은 View를 직접 참조하지 않음. 팝업은 이벤트로 요청

@@ -24,20 +24,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly AuthService     _auth;
     private CancellationTokenSource? _markingCts;
 
-    // TODO: 실서버 전환 시 URL/IP를 설정 파일로 이동
-    private const string ApiBaseUrl = "http://localhost:3000/api/marking";
-    private const string PlcHost    = XgtRawPlcClient.DefaultHost;
-    private const int    PlcPort    = XgtRawPlcClient.DefaultPort;
-
-    private static IPlcClient CreatePlcClient() =>
-        new XgtRawPlcClient(PlcHost, PlcPort);
-
-    public MainViewModel(AuthService auth)
+    public MainViewModel(AuthService auth, AppSettings settings)
     {
         _auth = auth;
         _db   = new LocalDatabase();
-        _api  = new WizMesApiClient(ApiBaseUrl, auth);
-        _plc  = CreatePlcClient();
+        _api  = new WizMesApiClient(settings.Api.BaseUrl, auth);
+        _plc  = PlcClientFactory.Create(settings.Plc);
         LotEntries = [];
 
         StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready);

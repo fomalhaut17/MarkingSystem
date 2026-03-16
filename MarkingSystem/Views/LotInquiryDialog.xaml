@@ -66,7 +66,7 @@
                 <!-- 물류 바코드 -->
                 <DataGridTextColumn Header="물류 바코드"
                                    Binding="{Binding MaterialBarcode}"
-                                   Width="200" MinWidth="130">
+                                   Width="2*" MinWidth="130">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -79,7 +79,7 @@
                 <!-- Lot 바코드 -->
                 <DataGridTextColumn Header="Lot 바코드"
                                    Binding="{Binding LotBarcode}"
-                                   Width="300" MinWidth="200">
+                                   Width="3*" MinWidth="200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>

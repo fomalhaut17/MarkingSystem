@@ -11,12 +11,12 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm;
     private readonly AuthService   _auth;
 
-    public MainWindow(AuthService auth)
+    public MainWindow(AuthService auth, AppSettings settings)
     {
         InitializeComponent();
 
         _auth = auth;
-        _vm   = new MainViewModel(auth);
+        _vm   = new MainViewModel(auth, settings);
         DataContext = _vm;
 
         _vm.ShowErrorRequested  += OnShowErrorRequested;
