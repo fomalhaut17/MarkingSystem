@@ -7,15 +7,14 @@ using System.Windows.Input;
 
 namespace MarkingSystem.Views;
 
-public partial class LotInquiryDialog : Window
+public partial class LotInquiryView : UserControl
 {
     private readonly ObservableCollection<LotEntry> _results = [];
     private readonly LocalDatabase _db = new();
 
-    public LotInquiryDialog()
+    public LotInquiryView()
     {
         InitializeComponent();
-        TxtDate.Text = DateTime.Now.ToString("yyyy년 M월 d일");
         ResultDataGrid.ItemsSource = _results;
     }
 
@@ -78,6 +77,4 @@ public partial class LotInquiryDialog : Window
             _db.UpdateInspectionResult(entry.LotBarcode, InspectionResult.NG);
         }
     }
-
-    private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
 }

@@ -415,4 +415,77 @@
         <Setter Property="Padding" Value="16,8"/>
     </Style>
 
+    <!-- ═══════════════════════════════════════════════════════
+         TABCONTROL / TABITEM
+    ═══════════════════════════════════════════════════════ -->
+
+    <Style x:Key="AppTabItem" TargetType="TabItem">
+        <Setter Property="FontFamily"  Value="{StaticResource AppFont}"/>
+        <Setter Property="FontSize"    Value="14"/>
+        <Setter Property="FontWeight"  Value="Bold"/>
+        <Setter Property="Padding"     Value="0"/>
+        <Setter Property="Margin"      Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="TabBorder"
+                            Background="White"
+                            Width="160" Height="48"
+                            BorderThickness="0">
+                        <TextBlock x:Name="TabText"
+                                   Text="{TemplateBinding Header}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   FontFamily="{StaticResource AppFont}"
+                                   FontSize="14"
+                                   FontWeight="Bold"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource BluePrimary}"/>
+                            <Setter TargetName="TabText"   Property="Foreground" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="TabText" Property="Foreground" Value="{StaticResource TextDisabled}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="False"/>
+                                <Condition Property="IsEnabled"  Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="TabBorder" Property="Cursor" Value="Hand"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="AppTabControl" TargetType="TabControl">
+        <Setter Property="Background"      Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding"         Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid Background="White">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="48"/>
+                            <RowDefinition Height="1"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TabPanel Grid.Row="0"
+                                  IsItemsHost="True"
+                                  Background="White"/>
+                        <Rectangle Grid.Row="1" Fill="{StaticResource DividerBrush}"/>
+                        <ContentPresenter Grid.Row="2"
+                                          x:Name="PART_SelectedContentHost"
+                                          ContentSource="SelectedContent"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

@@ -1,7 +1,6 @@
 using MarkingSystem.Models;
 using MarkingSystem.Services;
 using System.Collections.ObjectModel;
-using System.Net.Http;
 using System.Windows.Input;
 
 namespace MarkingSystem.ViewModels;
@@ -10,12 +9,13 @@ public enum SystemState { Idle, Ready, Operating, ResultReady }
 
 public sealed class MainViewModel : ViewModelBase, IDisposable
 {
-    private string        _materialBarcodeInput  = string.Empty;
-    private bool          _isOperating      = false;
-    private SystemState   _state            = SystemState.Idle;
+    private string        _materialBarcodeInput = string.Empty;
+    private bool          _isOperating          = false;
+    private SystemState   _state                = SystemState.Idle;
+    private int           _selectedTab          = 0;
     private MaterialInfo? _currentMaterial;
-    private string        _currentDateText  = string.Empty;
-    private string        _statusMessage    = "Lot 바코드를 스캔하거나 입력하세요.";
+    private string        _currentDateText      = string.Empty;
+    private string        _statusMessage        = "Lot 바코드를 스캔하거나 입력하세요.";
 
     private readonly Timer           _clockTimer;
     private readonly LocalDatabase   _db;
@@ -44,14 +44,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _plc = CreatePlcClient();
         LotEntries = [];
 
-        StartPublishCommand         = new RelayCommand(ExecuteStartPublish,         () => State == SystemState.Ready);
-        StopPublishCommand          = new RelayCommand(ExecuteStopPublish,          () => State == SystemState.Operating);
-        MarkDefectCommand           = new RelayCommand(ExecuteMarkDefect,           () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
-        ProductionLotInquiryCommand = new RelayCommand(ExecuteProductionLotInquiry, () => State != SystemState.Idle);
-        SaveResultCommand           = new RelayCommand(ExecuteSaveResult,           () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
-        LotInquiryCommand           = new RelayCommand(ExecuteLotInquiry,           () => State != SystemState.Idle);
-        SelectAllCommand            = new RelayCommand(ExecuteSelectAll);
-        DeselectAllCommand          = new RelayCommand(ExecuteDeselectAll);
+        StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready);
+        StopPublishCommand  = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating);
+        MarkDefectCommand   = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
+        SaveResultCommand   = new RelayCommand(ExecuteSaveResult,   () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
+        SelectAllCommand    = new RelayCommand(ExecuteSelectAll);
+        DeselectAllCommand  = new RelayCommand(ExecuteDeselectAll);
 
         UpdateDateTime();
         _clockTimer = new Timer(_ => UpdateDateTime(), null, 1000, 1000);
@@ -74,8 +72,21 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public SystemState State
     {
         get => _state;
-        set { SetProperty(ref _state, value); }
+        set
+        {
+            SetProperty(ref _state, value);
+            OnPropertyChanged(nameof(IsTabSwitchable));
+        }
     }
+
+    public int SelectedTab
+    {
+        get => _selectedTab;
+        set { SetProperty(ref _selectedTab, value); }
+    }
+
+    /// <summary>발행 중(Operating)이 아닐 때 탭 전환 허용</summary>
+    public bool IsTabSwitchable => State != SystemState.Operating;
 
     public MaterialInfo? CurrentMaterial
     {
@@ -104,19 +115,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     // ── Commands ─────────────────────────────────────────────────────────────
 
-    public ICommand StartPublishCommand         { get; }
-    public ICommand StopPublishCommand          { get; }
-    public ICommand MarkDefectCommand           { get; }
-    public ICommand ProductionLotInquiryCommand { get; }
-    public ICommand SaveResultCommand           { get; }
-    public ICommand LotInquiryCommand           { get; }
-    public ICommand SelectAllCommand            { get; }
-    public ICommand DeselectAllCommand          { get; }
+    public ICommand StartPublishCommand { get; }
+    public ICommand StopPublishCommand  { get; }
+    public ICommand MarkDefectCommand   { get; }
+    public ICommand SaveResultCommand   { get; }
+    public ICommand SelectAllCommand    { get; }
+    public ICommand DeselectAllCommand  { get; }
 
     // ── Events ───────────────────────────────────────────────────────────────
 
-    public event EventHandler? ProductionLotInquiryRequested;
-    public event EventHandler? LotInquiryRequested;
     public event EventHandler<string>? ShowErrorRequested;
 
     // ── Private Methods ──────────────────────────────────────────────────────
@@ -191,6 +198,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private async void ExecuteStartPublish()
     {
+        SelectedTab   = 0;   // 발행 중 각인 관리 탭으로 고정
         IsOperating   = true;
         State         = SystemState.Operating;
         StatusMessage = "PLC 연결 중...";
@@ -290,9 +298,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage = "선택된 항목을 불량(NG) 처리했습니다.";
     }
 
-    private void ExecuteProductionLotInquiry()
-        => ProductionLotInquiryRequested?.Invoke(this, EventArgs.Empty);
-
     private void ExecuteSaveResult()
     {
         if (CurrentMaterial != null)
@@ -302,9 +307,6 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         State         = SystemState.Idle;
         IsOperating   = false;
     }
-
-    private void ExecuteLotInquiry()
-        => LotInquiryRequested?.Invoke(this, EventArgs.Empty);
 
     private void ExecuteSelectAll()   { foreach (var e in LotEntries) e.IsSelected = true; }
     private void ExecuteDeselectAll() { foreach (var e in LotEntries) e.IsSelected = false; }

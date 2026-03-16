@@ -1,5 +1,4 @@
 using MarkingSystem.ViewModels;
-using MarkingSystem.Views;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,9 +16,7 @@ public partial class MainWindow : Window
         _vm = new MainViewModel();
         DataContext = _vm;
 
-        _vm.ProductionLotInquiryRequested += OnProductionLotInquiryRequested;
-        _vm.LotInquiryRequested           += OnLotInquiryRequested;
-        _vm.ShowErrorRequested            += OnShowErrorRequested;
+        _vm.ShowErrorRequested += OnShowErrorRequested;
     }
 
     // ── Barcode input ────────────────────────────────────────────────────────
@@ -50,21 +47,8 @@ public partial class MainWindow : Window
     private void LotDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         => RelayCommand.Invalidate();
 
-    // ── Dialogs ──────────────────────────────────────────────────────────────
-
-    private void OnProductionLotInquiryRequested(object? sender, EventArgs e)
-    {
-        var dlg = new ProductionLotDialog(_vm.CurrentMaterial) { Owner = this };
-        dlg.ShowDialog();
-    }
-
-    private void OnLotInquiryRequested(object? sender, EventArgs e)
-    {
-        var dlg = new LotInquiryDialog { Owner = this };
-        dlg.ShowDialog();
-    }
+    // ── Error dialog ─────────────────────────────────────────────────────────
 
     private void OnShowErrorRequested(object? sender, string message)
         => MessageBox.Show(message, "오류", MessageBoxButton.OK, MessageBoxImage.Warning);
-
 }

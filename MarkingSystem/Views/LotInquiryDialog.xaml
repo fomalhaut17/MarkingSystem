@@ -1,41 +1,20 @@
-<Window x:Class="MarkingSystem.Views.LotInquiryDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Lot 조회"
-        Width="900" Height="600"
-        MinWidth="700" MinHeight="460"
-        WindowStyle="SingleBorderWindow"
-        ResizeMode="CanResize"
-        Background="White"
-        WindowStartupLocation="CenterOwner"
-        FontFamily="pack://application:,,,/MarkingSystem;component/Fonts/#NanumSquare, 맑은 고딕, Malgun Gothic">
-
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Styles/FluentLight.xaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
+<UserControl x:Class="MarkingSystem.Views.LotInquiryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
 
     <Grid Background="White">
         <Grid.RowDefinitions>
-            <RowDefinition Height="70"/>   <!-- 0: 툴바           -->
-            <RowDefinition Height="1"/>    <!-- 1: 구분선          -->
-            <RowDefinition Height="*"/>    <!-- 2: DataGrid       -->
-            <RowDefinition Height="1"/>    <!-- 3: 구분선          -->
-            <RowDefinition Height="90"/>   <!-- 4: 하단 버튼       -->
+            <RowDefinition Height="70"/>   <!-- 0: 검색 영역   -->
+            <RowDefinition Height="1"/>    <!-- 1: 구분선       -->
+            <RowDefinition Height="*"/>    <!-- 2: DataGrid    -->
+            <RowDefinition Height="1"/>    <!-- 3: 구분선       -->
+            <RowDefinition Height="90"/>   <!-- 4: 하단 버튼    -->
         </Grid.RowDefinitions>
 
-        <!-- ── 툴바 ── -->
+        <!-- ── 검색 영역 ── -->
         <Grid Grid.Row="0" Margin="24,0,24,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>  <!-- 입력 영역 -->
-                <ColumnDefinition Width="*"/>     <!-- 여백      -->
-                <ColumnDefinition Width="Auto"/>  <!-- 날짜      -->
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="물류 바코드 / Lot 코드"
                            FontSize="14" FontWeight="Bold"
                            Foreground="#333333"
@@ -51,12 +30,6 @@
                         Margin="8,0,0,0"
                         Click="SearchBtn_Click"/>
             </StackPanel>
-
-            <TextBlock x:Name="TxtDate"
-                       Grid.Column="2"
-                       FontSize="14" FontWeight="Bold"
-                       Foreground="#333333"
-                       VerticalAlignment="Center"/>
         </Grid>
 
         <Rectangle Grid.Row="1" Fill="{StaticResource DividerBrush}"/>
@@ -153,11 +126,6 @@
                     Width="120" Height="60"
                     HorizontalAlignment="Left" VerticalAlignment="Center"
                     Click="MarkDefectBtn_Click"/>
-            <Button Content="종료"
-                    Style="{StaticResource LargeYellowButton}"
-                    Width="120" Height="60"
-                    HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Click="CloseBtn_Click"/>
         </Grid>
     </Grid>
-</Window>
+</UserControl>
