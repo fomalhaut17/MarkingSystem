@@ -7,7 +7,6 @@ namespace MarkingSystem.Services;
 /// <summary>
 /// LS XGT FENET 프로토콜 직접 구현 클라이언트.
 /// Mock PLC 서버(mock-plc/server.js)와 통신하는 개발용 구현체.
-/// 실 PLC 연결 시에는 HslPlcClient를 사용한다.
 /// </summary>
 public sealed class XgtRawPlcClient : IPlcClient
 {
@@ -18,16 +17,16 @@ public sealed class XgtRawPlcClient : IPlcClient
 
     private const byte   SrcPc      = 0x33;
     private const int    HeaderSize = 20;
-    private const ushort CmdRead    = 0x0054;
-    private const ushort CmdWrite   = 0x0058;
     private const ushort TypeWord   = 0x0002;
 
-    // ── PLC 메모리 맵 ─────────────────────────────────────────────────────────
+    // ── PLC 메모리 주소 (appsettings.json에서 주입) ───────────────────────────
 
-    private const string AddrLotBarcode      = "%MW100";
-    private const int    LotBarcodeWordCount = 15;
-    private const string AddrCommand         = "%MW116";
-    private const string AddrStatus          = "%MW117";
+    private readonly string _addrLotBarcode1;
+    private readonly string _addrLotBarcode2;
+    private readonly int    _lotBarcodeWordCount;
+    private readonly string _addrBarcodeRequest;
+    private readonly string _addrScannedBarcode1;
+    private readonly string _addrScannedBarcode2;
 
     // ── 접속 ──────────────────────────────────────────────────────────────────
 
@@ -43,10 +42,16 @@ public sealed class XgtRawPlcClient : IPlcClient
 
     public bool IsConnected => _tcp?.Connected == true && _stream != null;
 
-    public XgtRawPlcClient(string host = DefaultHost, int port = DefaultPort)
+    public XgtRawPlcClient(string host, int port, PlcMemorySettings memory)
     {
-        _host = host;
-        _port = port;
+        _host                = host;
+        _port                = port;
+        _addrLotBarcode1     = memory.LotBarcode1Addr;
+        _addrLotBarcode2     = memory.LotBarcode2Addr;
+        _lotBarcodeWordCount = memory.LotBarcodeWordCount;
+        _addrBarcodeRequest  = memory.BarcodeRequestAddr;
+        _addrScannedBarcode1 = memory.ScannedBarcode1Addr;
+        _addrScannedBarcode2 = memory.ScannedBarcode2Addr;
     }
 
     // ── 연결 관리 ─────────────────────────────────────────────────────────────
@@ -74,44 +79,54 @@ public sealed class XgtRawPlcClient : IPlcClient
         _tcp?.Dispose();    _tcp    = null;
     }
 
-    // ── 고수준 API ────────────────────────────────────────────────────────────
+    // ── IPlcClient 구현 ───────────────────────────────────────────────────────
 
-    public async Task<bool> WriteLotBarcodeAsync(string lotBarcode)
+    public async Task<bool> ReadBarcodeRequestAsync()
     {
-        var data = new byte[LotBarcodeWordCount * 2];
-        var src  = Encoding.ASCII.GetBytes(lotBarcode);
-        Buffer.BlockCopy(src, 0, data, 0, Math.Min(src.Length, data.Length));
-        return await WriteWordsAsync(AddrLotBarcode, LotBarcodeWordCount, data);
+        var words = await ReadWordsAsync(_addrBarcodeRequest, 1);
+        return words?[0] == 1;
     }
 
-    public Task<bool> WriteStartCommandAsync() => WriteSingleWordAsync(AddrCommand, 1);
-    public Task<bool> WriteStopCommandAsync()  => WriteSingleWordAsync(AddrCommand, 2);
-    public Task<bool> ClearCommandAsync()      => WriteSingleWordAsync(AddrCommand, 0);
-
-    public async Task<PlcStatus> ReadStatusAsync()
+    public async Task<bool> WriteLotBarcodesAsync(string barcode1, string barcode2)
     {
-        var words = await ReadWordsAsync(AddrStatus, 1);
-        if (words == null) return PlcStatus.Error;
-        return words[0] switch
-        {
-            0 => PlcStatus.Idle,
-            1 => PlcStatus.Marking,
-            2 => PlcStatus.DoneOk,
-            3 => PlcStatus.DoneNg,
-            _ => PlcStatus.Error,
-        };
+        return await WriteWordsAsync(_addrLotBarcode1, _lotBarcodeWordCount, BarcodeToBytes(barcode1))
+            && await WriteWordsAsync(_addrLotBarcode2, _lotBarcodeWordCount, BarcodeToBytes(barcode2));
+    }
+
+    public Task<bool> ClearBarcodeRequestAsync() => WriteSingleWordAsync(_addrBarcodeRequest, 0);
+
+    public async Task<(string? barcode1, string? barcode2)> ReadScannedBarcodesAsync()
+    {
+        var w1 = await ReadWordsAsync(_addrScannedBarcode1, _lotBarcodeWordCount);
+        if (w1 == null) return (null, null);
+        var bc1 = WordsToBarcode(w1);
+        if (string.IsNullOrEmpty(bc1)) return (null, null);
+
+        var w2 = await ReadWordsAsync(_addrScannedBarcode2, _lotBarcodeWordCount);
+        if (w2 == null) return (null, null);
+        var bc2 = WordsToBarcode(w2);
+        if (string.IsNullOrEmpty(bc2)) return (null, null);
+
+        return (bc1, bc2);
+    }
+
+    public async Task<bool> ClearScannedBarcodesAsync()
+    {
+        var zeros = new byte[_lotBarcodeWordCount * 2];
+        return await WriteWordsAsync(_addrScannedBarcode1, _lotBarcodeWordCount, zeros)
+            && await WriteWordsAsync(_addrScannedBarcode2, _lotBarcodeWordCount, zeros);
     }
 
     // ── 저수준 Read ───────────────────────────────────────────────────────────
 
-    private async Task<ushort[]?> ReadWordsAsync(string varName, ushort wordCount)
+    private async Task<ushort[]?> ReadWordsAsync(string varName, int wordCount)
     {
         await _lock.WaitAsync();
         try
         {
             if (_stream == null) return null;
 
-            await SendFrameAsync(_invokeId++, BuildReadAppData(varName, wordCount));
+            await SendFrameAsync(_invokeId++, BuildReadAppData(varName, (ushort)wordCount));
 
             var resp = await RecvAppDataAsync();
             if (resp == null || resp.Length < 6) return null;
@@ -128,10 +143,10 @@ public sealed class XgtRawPlcClient : IPlcClient
 
     // ── 저수준 Write ──────────────────────────────────────────────────────────
 
-    private async Task<bool> WriteSingleWordAsync(string varName, ushort value)
+    private Task<bool> WriteSingleWordAsync(string varName, ushort value)
     {
         var data = new byte[] { (byte)(value & 0xFF), (byte)(value >> 8) };
-        return await WriteWordsAsync(varName, 1, data);
+        return WriteWordsAsync(varName, 1, data);
     }
 
     private async Task<bool> WriteWordsAsync(string varName, int wordCount, byte[] data)
@@ -150,9 +165,29 @@ public sealed class XgtRawPlcClient : IPlcClient
         finally { _lock.Release(); }
     }
 
+    // ── 바이트 변환 헬퍼 ──────────────────────────────────────────────────────
+
+    private byte[] BarcodeToBytes(string barcode)
+    {
+        var data = new byte[_lotBarcodeWordCount * 2];
+        var src  = Encoding.ASCII.GetBytes(barcode);
+        Buffer.BlockCopy(src, 0, data, 0, Math.Min(src.Length, data.Length));
+        return data;
+    }
+
+    private static string WordsToBarcode(ushort[] words)
+    {
+        var bytes = new byte[words.Length * 2];
+        for (int i = 0; i < words.Length; i++)
+        {
+            bytes[i * 2]     = (byte)(words[i] & 0xFF);
+            bytes[i * 2 + 1] = (byte)(words[i] >> 8);
+        }
+        return Encoding.ASCII.GetString(bytes).TrimEnd('\0');
+    }
+
     // ── 프레임 빌더 ───────────────────────────────────────────────────────────
 
-    // [CMD(2)] [TYPE(2)] [블록수(2)] [이름길이(2)] [이름...] [데이터수(2)]
     private static byte[] BuildReadAppData(string varName, ushort wordCount)
     {
         var name = Encoding.ASCII.GetBytes(varName);
@@ -167,7 +202,6 @@ public sealed class XgtRawPlcClient : IPlcClient
         return buf;
     }
 
-    // [CMD(2)] [TYPE(2)] [블록수(2)] [이름길이(2)] [이름...] [데이터수(2)] [데이터...]
     private static byte[] BuildWriteAppData(string varName, int wordCount, byte[] data)
     {
         var name = Encoding.ASCII.GetBytes(varName);

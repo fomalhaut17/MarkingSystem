@@ -12,8 +12,10 @@ public static class PlcClientFactory
             ? new CnetSerialPlcClient(
                 settings.Serial.PortName,
                 settings.Serial.BaudRate,
-                settings.Serial.StationNo)
+                settings.Serial.StationNo,
+                settings.Memory)
             : new XgtRawPlcClient(
                 settings.Tcp.Host,
-                settings.Tcp.Port);
+                settings.Tcp.Port,
+                settings.Memory);
 }
