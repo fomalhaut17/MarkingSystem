@@ -135,7 +135,7 @@ public sealed class LocalDatabase
         cmd.CommandText = """
             SELECT lot_ser, inspection_result
               FROM issue_log
-             WHERE material_barcode = $mb AND is_result_saved = 0
+             WHERE material_barcode = $mb
             """;
         cmd.Parameters.AddWithValue("$mb", materialBarcode);
 
