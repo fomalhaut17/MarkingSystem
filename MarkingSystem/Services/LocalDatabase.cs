@@ -125,6 +125,32 @@ public sealed class LocalDatabase
     }
 
     /// <summary>
+    /// 특정 물류 바코드의 미저장 발행 결과를 반환.
+    /// 반환: lot_ser → InspectionResult 매핑. 없으면 빈 딕셔너리.
+    /// </summary>
+    public Dictionary<string, InspectionResult> GetIssueResultsByMaterial(string materialBarcode)
+    {
+        using var conn = OpenConnection();
+        using var cmd  = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT lot_ser, inspection_result
+              FROM issue_log
+             WHERE material_barcode = $mb AND is_result_saved = 0
+            """;
+        cmd.Parameters.AddWithValue("$mb", materialBarcode);
+
+        var result = new Dictionary<string, InspectionResult>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var ser = reader.GetString(0);
+            if (Enum.TryParse<InspectionResult>(reader.GetString(1), out var r))
+                result[ser] = r;
+        }
+        return result;
+    }
+
+    /// <summary>
     /// 특정 LotCode의 로컬 최종발행 Ser 반환.
     /// 기록 없으면 "000000" 반환.
     /// </summary>

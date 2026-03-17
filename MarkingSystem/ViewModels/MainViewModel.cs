@@ -27,9 +27,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _markingCts;
 
     // ── 발행 세션 상태 ────────────────────────────────────────────────────────
-    private int _issueStartSer; // 이번 발행 시작 직전 Ser (다음 발행은 +1부터)
-    private int _issueCount;    // 이번 발행할 총 개수
-    private int _issuedSoFar;   // 현재까지 PLC에 전송 요청한 개수
+    // LotEntries는 ApplyMaterial 시 전체 목록(NotIssued)으로 미리 구성됨
+    // 발행 루프는 NotIssued 항목을 순서대로 PLC에 전송함
 
     public MainViewModel(AuthService auth, AppSettings settings)
     {
@@ -177,15 +176,31 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         material.WorkDateTime    = DateTime.Now;
         CurrentMaterial          = material;
 
-        // 발행 세션 초기화 (LotEntry는 발행 시 동적으로 추가)
-        _issueStartSer = int.Parse(lastSer);
-        _issueCount    = int.Parse(material.ContainerQty);
-        _issuedSoFar   = 0;
+        // 전체 목록 구성: 000001 ~ containerQty (NotIssued)
+        int totalCount = int.Parse(material.ContainerQty);
         LotEntries.Clear();
+        for (int i = 1; i <= totalCount; i++)
+        {
+            LotEntries.Add(new LotEntry
+            {
+                Sequence        = i,
+                MaterialBarcode = barcode,
+                LotBarcode      = material.LotCode + i.ToString("D6"),
+                Result          = InspectionResult.NotIssued,
+            });
+        }
+
+        // DB 오버레이: 이전에 발행된 항목의 결과를 반영
+        var dbResults = _db.GetIssueResultsByMaterial(barcode);
+        foreach (var entry in LotEntries)
+        {
+            if (dbResults.TryGetValue(entry.LotSer, out var result))
+                entry.Result = result;
+        }
 
         RefreshCounts();
         State         = SystemState.Ready;
-        StatusMessage = $"조회 완료: {barcode}  (발행 예정 {_issueCount}개)";
+        StatusMessage = $"조회 완료: {barcode}  (발행 예정 {totalCount}개)";
     }
 
     private async void ExecuteStartPublish()
@@ -211,7 +226,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        StatusMessage = $"발행 중...  (총 {_issueCount}개)";
+        StatusMessage = $"발행 중...  (총 {LotEntries.Count}개)";
 
         var buffer = new ConcurrentQueue<(LotEntry e1, LotEntry? e2)>();
 
@@ -230,14 +245,25 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Loop 1: PLC 발행 요청 감지 → Lot 바코드 2개 전송 → 버퍼에 추가.
-    /// 모든 발행 완료 또는 취소 시 종료.
+    /// Loop 1: PLC 발행 요청 감지 → NotIssued 항목 2개 찾아 Pending으로 전환 → 버퍼에 추가.
+    /// NotIssued 항목이 없거나 취소 시 종료.
     /// </summary>
     private async Task BarcodeRequestLoopAsync(
         ConcurrentQueue<(LotEntry, LotEntry?)> buffer, CancellationToken ct)
     {
-        while (_issuedSoFar < _issueCount && !ct.IsCancellationRequested)
+        while (!ct.IsCancellationRequested)
         {
+            // 다음에 발행할 NotIssued 항목 탐색 (UI 스레드에서 접근)
+            LotEntry? e1 = null, e2 = null;
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var pending = LotEntries.Where(e => e.Result == InspectionResult.NotIssued).Take(2).ToList();
+                if (pending.Count >= 1) e1 = pending[0];
+                if (pending.Count >= 2) e2 = pending[1];
+            });
+
+            if (e1 == null) break; // 모든 항목 발행 완료
+
             // PLC가 발행 요청 메모리를 1로 세팅할 때까지 대기
             while (!ct.IsCancellationRequested)
             {
@@ -246,48 +272,26 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             }
             if (ct.IsCancellationRequested) return;
 
-            // 이번 배치: 1 또는 2개 (마지막 홀수 케이스 대비)
-            int batchSize = Math.Min(2, _issueCount - _issuedSoFar);
-
-            var bc1 = _currentMaterial!.LotCode + (_issueStartSer + _issuedSoFar + 1).ToString("D6");
-            var bc2 = _currentMaterial.LotCode  + (_issueStartSer + _issuedSoFar + 2).ToString("D6");
-
-            // PLC에 전송 (batchSize=1이어도 #2 슬롯에 bc2 전송 — PLC가 1개만 처리)
-            if (!await _plc.WriteLotBarcodesAsync(bc1, bc2)) break;
+            // PLC에 전송 (e2=null이어도 bc2 슬롯 전송 — PLC가 1개만 처리)
+            if (!await _plc.WriteLotBarcodesAsync(e1.LotBarcode, e2?.LotBarcode ?? e1.LotBarcode)) break;
             if (!await _plc.ClearBarcodeRequestAsync()) break;
 
-            // LotEntry 생성 및 그리드에 추가 (UI 스레드)
-            var e1 = new LotEntry
-            {
-                Sequence        = _issuedSoFar + 1,
-                MaterialBarcode = _currentMaterial.MaterialBarcode,
-                LotBarcode      = bc1,
-                Result          = InspectionResult.Pending,
-            };
-            LotEntry? e2 = batchSize == 2 ? new LotEntry
-            {
-                Sequence        = _issuedSoFar + 2,
-                MaterialBarcode = _currentMaterial.MaterialBarcode,
-                LotBarcode      = bc2,
-                Result          = InspectionResult.Pending,
-            } : null;
-
+            // NotIssued → Pending 전환 및 DB 삽입
             Application.Current.Dispatcher.Invoke(() =>
             {
-                LotEntries.Add(e1);
-                if (e2 != null) LotEntries.Add(e2);
+                e1!.Result = InspectionResult.Pending;
+                if (e2 != null) e2.Result = InspectionResult.Pending;
             });
 
-            // 로컬 DB에 Pending으로 저장
             _db.InsertIssueLog(e1.MaterialBarcode, e1.LotBarcode);
             if (e2 != null) _db.InsertIssueLog(e2.MaterialBarcode, e2.LotBarcode);
 
-            _issuedSoFar += batchSize;
             if (CurrentMaterial != null)
                 CurrentMaterial.LastIssuedSer = (e2 ?? e1).LotSer;
 
+            var issuedCount = LotEntries.Count(e => e.Result != InspectionResult.NotIssued);
             RefreshCounts();
-            StatusMessage = $"발행 중...  {_issuedSoFar}/{_issueCount}  ({bc1})";
+            StatusMessage = $"발행 중...  {issuedCount}/{LotEntries.Count}  ({e1.LotBarcode})";
 
             // 스캐너 검사 루프에 전달
             buffer.Enqueue((e1, e2));

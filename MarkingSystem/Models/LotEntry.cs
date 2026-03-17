@@ -5,7 +5,8 @@ namespace MarkingSystem.Models;
 
 public enum InspectionResult
 {
-    Pending,
+    NotIssued,  // 목록 생성 시 초기값. DB에 저장되지 않음. UI 표시: "-"
+    Pending,    // PLC 전송 후 스캐너 결과 대기 중. DB에 저장됨. UI 표시: "대기"
     OK,
     NG,
     AD  // Await Decision (대기결정)
@@ -42,10 +43,11 @@ public class LotEntry : INotifyPropertyChanged
 
     public string ResultText => Result switch
     {
-        InspectionResult.OK => "OK",
-        InspectionResult.NG => "NG",
-        InspectionResult.AD => "AD",
-        _ => "-"
+        InspectionResult.Pending => "대기",
+        InspectionResult.OK      => "OK",
+        InspectionResult.NG      => "NG",
+        InspectionResult.AD      => "AD",
+        _                        => "-"   // NotIssued
     };
 
     public event PropertyChangedEventHandler? PropertyChanged;
