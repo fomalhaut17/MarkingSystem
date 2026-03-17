@@ -285,31 +285,31 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- 발행 시작 -->
+                        <!-- 발행 시작: 대기=노랑, 동작=파랑(IsStartOperating), 비활성화=회색 -->
                         <Button Grid.Column="0"
                                 Content="발행 시작"
                                 Command="{Binding StartPublishCommand}"
-                                Style="{StaticResource LargeBlueButton}"/>
+                                Tag="{Binding IsStartOperating}"
+                                Style="{StaticResource LargeActionButton}"/>
 
-                        <!-- 발행 종료 -->
+                        <!-- 발행 종료: 대기=노랑, 동작=파랑(IsStopOperating), 비활성화=회색 -->
                         <Button Grid.Column="1"
                                 Content="발행 종료"
                                 Command="{Binding StopPublishCommand}"
-                                Style="{StaticResource LargeYellowButton}"/>
+                                Tag="{Binding IsStopOperating}"
+                                Style="{StaticResource LargeActionButton}"/>
 
-                        <!-- 불량 처리 -->
+                        <!-- 불량 처리: 대기=노랑, 비활성화=회색 -->
                         <Button Grid.Column="2"
                                 Content="불량 처리"
                                 Command="{Binding MarkDefectCommand}"
-                                Style="{StaticResource LargeYellowButton}"/>
+                                Style="{StaticResource LargeActionButton}"/>
 
-                        <!-- 결과 저장 -->
+                        <!-- 결과 저장: 대기=노랑, 비활성화=회색 -->
                         <Button Grid.Column="3"
                                 Content="결과 저장"
                                 Command="{Binding SaveResultCommand}"
-                                Style="{StaticResource LargeActionButton}"
-                                Background="#D8D8D8"
-                                Foreground="#888888"/>
+                                Style="{StaticResource LargeActionButton}"/>
 
                     </Grid>
                 </Grid>

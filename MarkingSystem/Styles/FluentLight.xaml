@@ -174,8 +174,64 @@
          BUTTON – Large action (bottom bar)
     ═══════════════════════════════════════════════════════ -->
 
+    <!--
+        LargeActionButton — 하단 액션 버튼 공통 스타일 (§7.2.1).
+        Tag 값으로 동작 상태를 ViewModel에서 템플릿 안까지 전달한다 (§7.2.1).
+        · 기본값           → 회색 (비활성화)
+        · IsEnabled=True  → 노랑 (대기)
+        · Tag=True        → 파랑 (동작, IsEnabled=False 상태)
+    -->
     <Style x:Key="LargeActionButton" TargetType="Button">
+        <Setter Property="Foreground"      Value="#AAAAAA"/>
+        <Setter Property="Background"      Value="#D8D8D8"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily"      Value="{StaticResource AppFont}"/>
+        <Setter Property="FontSize"        Value="22"/>
+        <Setter Property="FontWeight"      Value="Bold"/>
+        <Setter Property="Cursor"          Value="Hand"/>
+        <Setter Property="Tag"             Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            CornerRadius="0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- 대기 (IsEnabled=True): 노랑 -->
+                        <Trigger Property="IsEnabled" Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource YellowPrimary}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Opacity" Value="0.72"/>
+                        </Trigger>
+                        <!-- 동작 (Tag=True): 파랑
+                             Trigger 대신 DataTrigger 사용 — Tag가 object 타입이므로
+                             Trigger는 bool/string 타입 불일치로 매칭 실패함 -->
+                        <DataTrigger Binding="{Binding Path=Tag,
+                                         RelativeSource={RelativeSource TemplatedParent}}"
+                                     Value="True">
+                            <Setter TargetName="bd" Property="Background" Value="{StaticResource BluePrimary}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        LargeBlueButton / LargeYellowButton — 단순 고정색 버튼 (3상태 없음).
+        LargeBlueButton: 로그인 화면 "로그인" 버튼
+        LargeYellowButton: Lot 조회 화면 "불량 처리" 버튼 등
+    -->
+    <Style x:Key="LargeBlueButton" TargetType="Button">
         <Setter Property="Foreground"      Value="White"/>
+        <Setter Property="Background"      Value="{StaticResource BluePrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontFamily"      Value="{StaticResource AppFont}"/>
         <Setter Property="FontSize"        Value="22"/>
@@ -184,8 +240,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="bd" Background="{TemplateBinding Background}"
-                            CornerRadius="0">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="0">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -205,12 +260,35 @@
         </Setter>
     </Style>
 
-    <Style x:Key="LargeBlueButton" TargetType="Button" BasedOn="{StaticResource LargeActionButton}">
-        <Setter Property="Background" Value="{StaticResource BluePrimary}"/>
-    </Style>
-
-    <Style x:Key="LargeYellowButton" TargetType="Button" BasedOn="{StaticResource LargeActionButton}">
-        <Setter Property="Background" Value="{StaticResource YellowPrimary}"/>
+    <Style x:Key="LargeYellowButton" TargetType="Button">
+        <Setter Property="Foreground"      Value="White"/>
+        <Setter Property="Background"      Value="{StaticResource YellowPrimary}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontFamily"      Value="{StaticResource AppFont}"/>
+        <Setter Property="FontSize"        Value="22"/>
+        <Setter Property="FontWeight"      Value="Bold"/>
+        <Setter Property="Cursor"          Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="bd" Property="Opacity" Value="0.72"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="#AAAAAA"/>
+                            <Setter TargetName="bd" Property="Background" Value="#D8D8D8"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ═══════════════════════════════════════════════════════

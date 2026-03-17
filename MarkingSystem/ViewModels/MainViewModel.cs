@@ -38,10 +38,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _plc  = PlcClientFactory.Create(settings.Plc);
         LotEntries = [];
 
-        StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready);
+        StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready || State == SystemState.ResultReady);
         StopPublishCommand  = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating);
-        MarkDefectCommand   = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.Operating && LotEntries.Any(e => e.IsSelected));
-        SaveResultCommand   = new RelayCommand(ExecuteSaveResult,   () => (State == SystemState.Operating || State == SystemState.ResultReady) && LotEntries.Any(e => e.Result != InspectionResult.Pending));
+        MarkDefectCommand   = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
+        SaveResultCommand   = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
         SelectAllCommand    = new RelayCommand(ExecuteSelectAll);
         DeselectAllCommand  = new RelayCommand(ExecuteDeselectAll);
         LogoutCommand       = new RelayCommand(ExecuteLogout);
@@ -71,6 +71,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         {
             SetProperty(ref _state, value);
             OnPropertyChanged(nameof(IsTabSwitchable));
+            OnPropertyChanged(nameof(IsStartOperating));
+            OnPropertyChanged(nameof(IsStopOperating));
+            RelayCommand.Invalidate();
         }
     }
 
@@ -82,6 +85,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     /// <summary>발행 중(Operating)이 아닐 때 탭 전환 허용</summary>
     public bool IsTabSwitchable => State != SystemState.Operating;
+
+    /// <summary>발행 시작 버튼 동작 상태 (파랑): 발행 진행 중</summary>
+    public bool IsStartOperating => State == SystemState.Operating;
+
+    /// <summary>발행 종료 버튼 동작 상태 (파랑): 발행 종료 후 결과 대기 중</summary>
+    public bool IsStopOperating => State == SystemState.ResultReady;
 
     public MaterialInfo? CurrentMaterial
     {
