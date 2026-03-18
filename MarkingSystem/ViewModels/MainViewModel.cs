@@ -37,21 +37,23 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public MainViewModel(AuthService auth, AppSettings settings)
     {
         _auth            = auth;
-        _db              = new LocalDatabase();
+        IsTestMode       = settings.AppMode is "local" or "dev";
+        _db              = new LocalDatabase(IsTestMode);
         _api             = new WizMesApiClient(settings.Api.BaseUrl, auth);
         _plc             = PlcClientFactory.Create(settings.Plc);
         _markingSettings = settings.Marking;
-        IsTestMode       = settings.AppMode is "local" or "dev";
         LotEntries = [];
 
-        StartPublishCommand    = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready || State == SystemState.ResultReady);
+        StartPublishCommand    = new RelayCommand(ExecuteStartPublish,
+            () => (State == SystemState.Ready || State == SystemState.ResultReady)
+                  && LotEntries.Any(e => e.Result == InspectionResult.NotIssued));
         StopPublishCommand     = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating && !_isStoppingInProgress);
         MarkDefectCommand      = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
         SaveResultCommand      = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
         SelectAllCommand       = new RelayCommand(ExecuteSelectAll);
         DeselectAllCommand     = new RelayCommand(ExecuteDeselectAll);
         LogoutCommand          = new RelayCommand(ExecuteLogout);
-        ResetTestDataCommand   = new RelayCommand(ExecuteResetTestData, () => IsTestMode && CurrentMaterial != null && State != SystemState.Operating);
+        ResetTestDataCommand   = new RelayCommand(ExecuteResetTestData, () => IsTestMode && State != SystemState.Operating);
 
         UpdateDateTime();
         _clockTimer = new Timer(_ => UpdateDateTime(), null, 1000, 1000);
@@ -97,7 +99,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public bool IsStartOperating => State == SystemState.Operating;
 
     /// <summary>발행 종료 버튼 동작 상태 (파랑): 발행 종료 후 결과 대기 중</summary>
-    public bool IsStopOperating => State == SystemState.ResultReady;
+    public bool IsStopOperating  => State == SystemState.ResultReady;
 
     public MaterialInfo? CurrentMaterial
     {
@@ -447,7 +449,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private void ExecuteMarkDefect()
     {
         var selected = LotEntries.Where(e => e.IsSelected).ToList();
-        if (selected.Count == 0) return;
+        if (selected.Count == 0)
+        {
+            ShowErrorRequested?.Invoke(this, "불량 처리할 항목을 선택하세요.");
+            return;
+        }
 
         bool hasOk = selected.Any(e => e.Result == InspectionResult.OK);
         string msg = hasOk
@@ -483,8 +489,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _db.SetResultSaved(CurrentMaterial.MaterialBarcode);
 
         StatusMessage = $"결과 저장 완료  (OK: {OkCount}, NG: {NgCount})";
-        State         = SystemState.Idle;
         IsOperating   = false;
+        State         = SystemState.Idle;
     }
 
     private void ExecuteSelectAll()   { foreach (var e in LotEntries) e.IsSelected = true; }
@@ -498,21 +504,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private async void ExecuteResetTestData()
     {
-        if (CurrentMaterial == null) return;
+        if (ConfirmRequested?.Invoke("모든 발행 이력을 삭제합니다.\n계속하시겠습니까?", "테스트 초기화") != true) return;
 
-        var barcode = CurrentMaterial.MaterialBarcode;
-        var msg     = $"[{barcode}] 의 발행 이력을 삭제합니다.\n계속하시겠습니까?";
-        if (ConfirmRequested?.Invoke(msg, "테스트 초기화") != true) return;
+        await _api.ResetTestDataAsync();
+        _db.ResetForTest();
 
-        await _api.ResetTestDataAsync(barcode);
-        _db.ResetForTest(barcode);
-
-        CurrentMaterial = null;
+        CurrentMaterial      = null;
         LotEntries.Clear();
+        RefreshCounts();
         MaterialBarcodeInput = string.Empty;
-        State         = SystemState.Idle;
-        IsOperating   = false;
-        StatusMessage = $"테스트 초기화 완료  ({barcode})";
+        IsOperating          = false;
+        State                = SystemState.Idle;
+        StatusMessage        = "테스트 초기화 완료";
     }
 
     public void RefreshCounts()
@@ -528,6 +531,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(AdCount));
         OnPropertyChanged(nameof(TotalCount));
         OnPropertyChanged(nameof(CurrentMaterial));
+        RelayCommand.Invalidate();
     }
 
     public void Dispose()

@@ -52,7 +52,78 @@
       "containerQty": "10"
     }
   ],
-  "mock_issue_results": [],
+  "mock_issue_results": [
+    {
+      "id": 75,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000001",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 76,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000002",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 77,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000003",
+      "inspectionResult": "NG",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 78,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000004",
+      "inspectionResult": "NG",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 79,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000005",
+      "inspectionResult": "NG",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 80,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000006",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 81,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000007",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 82,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000008",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 83,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000009",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    },
+    {
+      "id": 84,
+      "materialBarcode": "12345678901234",
+      "lotBarcode": "P2063121-B1-A:SHVB26073000010",
+      "inspectionResult": "OK",
+      "savedAt": "2026-03-18T08:25:42"
+    }
+  ],
   "mock_injection_conditions": [
     {
       "lotCode": "P2063121-B1-A:SHVB26073",

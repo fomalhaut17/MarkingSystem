@@ -71,11 +71,11 @@ public sealed class WizMesApiClient
 
     // ── TEST: 초기화 ──────────────────────────────────────────────────────────
 
-    public async Task ResetTestDataAsync(string materialBarcode)
+    public async Task ResetTestDataAsync()
     {
         try
         {
-            var url = $"{_baseUrl}/test/reset?materialBarcode={Uri.EscapeDataString(materialBarcode)}";
+            var url = $"{_baseUrl}/test/reset";
             var req = new HttpRequestMessage(HttpMethod.Delete, url);
             AttachToken(req);
             await _http.SendAsync(req);

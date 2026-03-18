@@ -181,10 +181,10 @@
 
     <!--
         LargeActionButton — 하단 액션 버튼 공통 스타일 (§7.2.1).
-        Tag 값으로 동작 상태를 ViewModel에서 템플릿 안까지 전달한다 (§7.2.1).
-        · 기본값           → 회색 (비활성화)
+        · 기본값           → 회색 (비활성화, IsEnabled=False)
         · IsEnabled=True  → 노랑 (대기)
-        · Tag=True        → 파랑 (동작, IsEnabled=False 상태)
+        · 동작 상태(파랑)  → 각 버튼의 파생 Style DataTrigger로 처리
+          (ControlTemplate DataTrigger는 Tag=object 타입 추론 불가로 사용 불가)
     -->
     <Style x:Key="LargeActionButton" TargetType="Button">
         <Setter Property="Foreground"      Value="#AAAAAA"/>
@@ -194,7 +194,6 @@
         <Setter Property="FontSize"        Value="22"/>
         <Setter Property="FontWeight"      Value="Bold"/>
         <Setter Property="Cursor"          Value="Hand"/>
-        <Setter Property="Tag"             Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -203,30 +202,23 @@
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <!-- 대기 (IsEnabled=True): 노랑 -->
-                        <Trigger Property="IsEnabled" Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource YellowPrimary}"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="bd" Property="Opacity" Value="0.72"/>
                         </Trigger>
-                        <!-- 동작 (Tag=True): 파랑
-                             Trigger 대신 DataTrigger 사용 — Tag가 object 타입이므로
-                             Trigger는 bool/string 타입 불일치로 매칭 실패함 -->
-                        <DataTrigger Binding="{Binding Path=Tag,
-                                         RelativeSource={RelativeSource TemplatedParent}}"
-                                     Value="True">
-                            <Setter TargetName="bd" Property="Background" Value="{StaticResource BluePrimary}"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <!-- 대기 (IsEnabled=True): 노랑 -->
+            <Trigger Property="IsEnabled" Value="True">
+                <Setter Property="Background" Value="{StaticResource YellowPrimary}"/>
+                <Setter Property="Foreground" Value="White"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!--

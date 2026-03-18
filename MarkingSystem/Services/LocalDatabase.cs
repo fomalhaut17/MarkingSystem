@@ -12,13 +12,14 @@ public sealed class LocalDatabase
 {
     private readonly string _connectionString;
 
-    public LocalDatabase()
+    public LocalDatabase(bool isTestMode = false)
     {
         var folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "ManntekMarkingSystem");
         Directory.CreateDirectory(folder);
-        _connectionString = $"Data Source={Path.Combine(folder, "marking.db")}";
+        var dbFile = isTestMode ? "marking_test.db" : "marking.db";
+        _connectionString = $"Data Source={Path.Combine(folder, dbFile)}";
         Initialize();
     }
 
@@ -177,13 +178,12 @@ public sealed class LocalDatabase
 
     // ── 테스트 유틸 ───────────────────────────────────────────────────────────
 
-    /// <summary>테스트 초기화: 지정 물류 바코드의 issue_log 삭제.</summary>
-    public void ResetForTest(string materialBarcode)
+    /// <summary>테스트 초기화: issue_log 전체 삭제.</summary>
+    public void ResetForTest()
     {
         using var conn = OpenConnection();
         using var cmd  = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM issue_log WHERE material_barcode = $mb";
-        cmd.Parameters.AddWithValue("$mb", materialBarcode);
+        cmd.CommandText = "DELETE FROM issue_log";
         cmd.ExecuteNonQuery();
     }
 

@@ -78,6 +78,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>    <!-- 메인 콘텐츠   -->
                         <RowDefinition Height="1"/>    <!-- 구분선        -->
+                        <RowDefinition Height="32"/>   <!-- 상태 표시줄   -->
                         <RowDefinition Height="110"/>  <!-- 하단 버튼     -->
                     </Grid.RowDefinitions>
 
@@ -289,8 +290,16 @@
                     <!-- ── 가로 구분선 ── -->
                     <Rectangle Grid.Row="1" Fill="{StaticResource DividerBrush}"/>
 
+                    <!-- ── 상태 표시줄 ── -->
+                    <Border Grid.Row="2" Background="{StaticResource FieldBackground}">
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Style="{StaticResource BodyText}"
+                                   Margin="16,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Border>
+
                     <!-- ── 하단 버튼 (4개 균등 분할) ── -->
-                    <Grid Grid.Row="2">
+                    <Grid Grid.Row="3">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -301,16 +310,34 @@
                         <!-- 발행 시작: 대기=노랑, 동작=파랑(IsStartOperating), 비활성화=회색 -->
                         <Button Grid.Column="0"
                                 Content="발행 시작"
-                                Command="{Binding StartPublishCommand}"
-                                Tag="{Binding IsStartOperating}"
-                                Style="{StaticResource LargeActionButton}"/>
+                                Command="{Binding StartPublishCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource LargeActionButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStartOperating}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource BluePrimary}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
                         <!-- 발행 종료: 대기=노랑, 동작=파랑(IsStopOperating), 비활성화=회색 -->
                         <Button Grid.Column="1"
                                 Content="발행 종료"
-                                Command="{Binding StopPublishCommand}"
-                                Tag="{Binding IsStopOperating}"
-                                Style="{StaticResource LargeActionButton}"/>
+                                Command="{Binding StopPublishCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource LargeActionButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsStopOperating}" Value="True">
+                                            <Setter Property="Background" Value="{StaticResource BluePrimary}"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
                         <!-- 불량 처리: 대기=노랑, 비활성화=회색 -->
                         <Button Grid.Column="2"

@@ -240,19 +240,10 @@ server.get('/api/marking/production-lots/:lotCode', (req, res) => {
 // 테스트 모드(local/dev)에서만 사용. issueResultsStore 전체 삭제 후 db.json flush.
 
 server.delete('/api/marking/test/reset', (req, res) => {
-  const { materialBarcode } = req.query
-  if (!materialBarcode) {
-    return badRequest(res, 'MISSING_QUERY_PARAM', 'materialBarcode 파라미터가 필요합니다.')
-  }
-  const before = issueResultsStore.length
-  const indices = issueResultsStore
-    .map((r, i) => r.materialBarcode === materialBarcode ? i : -1)
-    .filter(i => i >= 0)
-    .reverse()
-  indices.forEach(i => issueResultsStore.splice(i, 1))
-  const cleared = before - issueResultsStore.length
+  const cleared = issueResultsStore.length
+  issueResultsStore.splice(0, issueResultsStore.length)
   flushIssueResults()
-  console.log(`[test/reset] materialBarcode=${materialBarcode} cleared=${cleared}`)
+  console.log(`[test/reset] cleared=${cleared}`)
   ok(res, { clearedCount: cleared })
 })
 
