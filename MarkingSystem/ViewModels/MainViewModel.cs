@@ -24,7 +24,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly WizMesApiClient _api;
     private readonly IPlcClient      _plc;
     private readonly AuthService     _auth;
+    private readonly MarkingSettings _markingSettings;
     private CancellationTokenSource? _markingCts;
+
+    private int  _inFlightCount        = 0;     // 전송 후 스캐너 확인 대기 중인 배치 수
+    private bool _isStoppingInProgress = false; // 발행 종료 대기 중 (중복 클릭 방지)
 
     // ── 발행 세션 상태 ────────────────────────────────────────────────────────
     // LotEntries는 ApplyMaterial 시 전체 목록(NotIssued)으로 미리 구성됨
@@ -32,14 +36,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public MainViewModel(AuthService auth, AppSettings settings)
     {
-        _auth = auth;
-        _db   = new LocalDatabase();
-        _api  = new WizMesApiClient(settings.Api.BaseUrl, auth);
-        _plc  = PlcClientFactory.Create(settings.Plc);
+        _auth            = auth;
+        _db              = new LocalDatabase();
+        _api             = new WizMesApiClient(settings.Api.BaseUrl, auth);
+        _plc             = PlcClientFactory.Create(settings.Plc);
+        _markingSettings = settings.Marking;
         LotEntries = [];
 
         StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready || State == SystemState.ResultReady);
-        StopPublishCommand  = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating);
+        StopPublishCommand  = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating && !_isStoppingInProgress);
         MarkDefectCommand   = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
         SaveResultCommand   = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
         SelectAllCommand    = new RelayCommand(ExecuteSelectAll);
@@ -282,8 +287,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             if (ct.IsCancellationRequested) return;
 
             // PLC에 전송 (e2=null이어도 bc2 슬롯 전송 — PLC가 1개만 처리)
-            if (!await _plc.WriteLotBarcodesAsync(e1.LotBarcode, e2?.LotBarcode ?? e1.LotBarcode)) break;
-            if (!await _plc.ClearBarcodeRequestAsync()) break;
+            Interlocked.Increment(ref _inFlightCount);
+            if (!await _plc.WriteLotBarcodesAsync(e1.LotBarcode, e2?.LotBarcode ?? e1.LotBarcode))
+            {
+                Interlocked.Decrement(ref _inFlightCount);
+                break;
+            }
+            if (!await _plc.ClearBarcodeRequestAsync())
+            {
+                Interlocked.Decrement(ref _inFlightCount);
+                break;
+            }
 
             // NotIssued → Pending 전환 및 DB 삽입
             Application.Current.Dispatcher.Invoke(() =>
@@ -352,17 +366,34 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             }
 
             await _plc.ClearScannedBarcodesAsync();
+            Interlocked.Decrement(ref _inFlightCount);
             RefreshCounts();
         }
     }
 
-    private void ExecuteStopPublish()
+    private async void ExecuteStopPublish()
     {
-        _markingCts?.Cancel();
+        _isStoppingInProgress = true;
+        RelayCommand.Invalidate();
 
-        IsOperating   = false;
-        State         = SystemState.ResultReady;
-        StatusMessage = "발행 정지.  결과를 저장하거나 검토하세요.";
+        if (_inFlightCount > 0)
+        {
+            StatusMessage = "전송 완료 대기 중...";
+            var deadline = DateTime.UtcNow.AddMilliseconds(_markingSettings.StopWaitTimeoutMs);
+            while (_inFlightCount > 0 && DateTime.UtcNow < deadline)
+                await Task.Delay(100);
+
+            if (_inFlightCount > 0)
+                ShowErrorRequested?.Invoke(this,
+                    $"타임아웃({_markingSettings.StopWaitTimeoutMs / 1000}초)이 발생했습니다.\n" +
+                    "일부 항목이 Pending 상태로 남을 수 있습니다.");
+        }
+
+        _markingCts?.Cancel();
+        _isStoppingInProgress = false;
+        IsOperating           = false;
+        State                 = SystemState.ResultReady;
+        StatusMessage         = "발행 정지.  결과를 저장하거나 검토하세요.";
     }
 
     private void ExecuteMarkDefect()

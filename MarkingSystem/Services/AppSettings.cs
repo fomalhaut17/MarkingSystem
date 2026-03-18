@@ -4,32 +4,59 @@ using System.Text.Json.Serialization;
 
 namespace MarkingSystem.Services;
 
+/// <summary>appsettings.json에서 AppMode만 읽기 위한 내부 클래스.</summary>
+internal sealed class AppModeSelector
+{
+    [JsonPropertyName("AppMode")] public string? AppMode { get; init; }
+}
+
 public sealed class AppSettings
 {
-    [JsonPropertyName("Plc")]  public PlcSettings Plc { get; init; } = new();
-    [JsonPropertyName("Api")]  public ApiSettings Api { get; init; } = new();
+    [JsonIgnore]                        public string          AppMode  { get; set; } = "local";
+    [JsonPropertyName("Plc")]           public PlcSettings     Plc      { get; init; } = new();
+    [JsonPropertyName("Api")]           public ApiSettings     Api      { get; init; } = new();
+    [JsonPropertyName("Marking")]       public MarkingSettings Marking  { get; init; } = new();
 
     /// <summary>
-    /// 실행 파일 옆의 appsettings.json을 읽어 반환한다.
-    /// 파일이 없으면 기본값(TCP Mock) 인스턴스를 반환한다.
+    /// 실행 파일 옆의 appsettings.json에서 AppMode를 읽고,
+    /// appsettings.{mode}.json을 로드하여 반환한다.
+    /// 파일이 없으면 기본값(local / TCP Mock) 인스턴스를 반환한다.
     /// </summary>
     public static AppSettings Load()
     {
-        var dir  = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-        var path = Path.Combine(dir, "appsettings.json");
+        var dir     = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        if (!File.Exists(path)) return new AppSettings();
+        // 1) appsettings.json → AppMode 읽기
+        var modeSelectorPath = Path.Combine(dir, "appsettings.json");
+        var mode = "local";
+        if (File.Exists(modeSelectorPath))
+        {
+            try
+            {
+                var selector = JsonSerializer.Deserialize<AppModeSelector>(
+                    File.ReadAllText(modeSelectorPath), options);
+                if (!string.IsNullOrWhiteSpace(selector?.AppMode))
+                    mode = selector.AppMode.ToLowerInvariant();
+            }
+            catch { }
+        }
+
+        // 2) appsettings.{mode}.json → 실제 설정 로드
+        var modePath = Path.Combine(dir, $"appsettings.{mode}.json");
+        if (!File.Exists(modePath)) return new AppSettings { AppMode = mode };
 
         try
         {
-            var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<AppSettings>(json,
-                       new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                   ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(
+                               File.ReadAllText(modePath), options)
+                           ?? new AppSettings();
+            settings.AppMode = mode;
+            return settings;
         }
         catch
         {
-            return new AppSettings();
+            return new AppSettings { AppMode = mode };
         }
     }
 }
@@ -72,6 +99,12 @@ public sealed class PlcMemorySettings
     [JsonPropertyName("ScannedBarcode1Addr")] public string ScannedBarcode1Addr { get; init; } = "%MW150";
     /// <summary>Scanner → PLC → PC: 스캐너 읽기 Lot #12 [TBD]</summary>
     [JsonPropertyName("ScannedBarcode2Addr")] public string ScannedBarcode2Addr { get; init; } = "%MW170";
+}
+
+public sealed class MarkingSettings
+{
+    /// <summary>발행 종료 시 진행 중인 전송 완료 대기 타임아웃 (ms)</summary>
+    [JsonPropertyName("StopWaitTimeoutMs")] public int StopWaitTimeoutMs { get; init; } = 10000;
 }
 
 public sealed class ApiSettings
