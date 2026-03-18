@@ -39,9 +39,22 @@ public partial class ProductionLotView : UserControl
         var lotCode = TxtSearchBarcode.Text.Trim();
         if (string.IsNullOrWhiteSpace(lotCode)) return;
 
-        var info = await _api.GetProductionLotAsync(lotCode);
+        StatusText.Text = "조회 중...";
+
+        ProductionLotInfo? info;
+        try
+        {
+            info = await _api.GetProductionLotAsync(lotCode);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"조회 오류: {ex.Message}";
+            return;
+        }
+
         if (info == null)
         {
+            StatusText.Text = "해당 Lot 코드를 찾을 수 없습니다.";
             DialogWindow.ShowError(Window.GetWindow(this), "해당 Lot 코드를 찾을 수 없습니다.", "조회 결과 없음");
             return;
         }
@@ -56,6 +69,7 @@ public partial class ProductionLotView : UserControl
         TxtNgCount.Text             = info.NgCount.ToString();
 
         PopulateInjGrid(info.InjectionConditions);
+        StatusText.Text = $"조회 완료: {info.LotCode}";
     }
 
     private void PopulateInjGrid(List<InjectionRow> rows)

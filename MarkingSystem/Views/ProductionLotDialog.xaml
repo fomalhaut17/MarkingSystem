@@ -51,6 +51,8 @@
             <RowDefinition Height="60"/>  <!-- 검색 영역 -->
             <RowDefinition Height="1"/>   <!-- 구분선    -->
             <RowDefinition Height="*"/>   <!-- 본문      -->
+            <RowDefinition Height="1"/>   <!-- 구분선    -->
+            <RowDefinition Height="32"/>  <!-- 상태 표시줄 -->
         </Grid.RowDefinitions>
 
         <!-- ══ 검색 영역 ══ -->
@@ -68,6 +70,7 @@
 
             <TextBox Grid.Column="1" x:Name="TxtSearchBarcode"
                      Style="{StaticResource FluentTextBox}"
+                     MaxLength="23"
                      VerticalAlignment="Center" Height="36"/>
 
             <Button Grid.Column="2" Content="Lot 조회"
@@ -329,5 +332,15 @@
                 </Border>
             </ScrollViewer>
         </Grid>
+
+        <Rectangle Grid.Row="3" Fill="{StaticResource DividerBrush}"/>
+
+        <!-- ── 상태 표시줄 ── -->
+        <Border Grid.Row="4" Background="{StaticResource FieldBackground}">
+            <TextBlock x:Name="StatusText"
+                       Style="{StaticResource BodyText}"
+                       Margin="16,0" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"/>
+        </Border>
     </Grid>
 </UserControl>

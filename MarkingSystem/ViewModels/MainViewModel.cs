@@ -142,6 +142,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<string>?  ShowErrorRequested;
     public event EventHandler?          LogoutRequested;
+    public event EventHandler?          TestDataReset;
     /// <summary>확인창 요청. message, title → true=Yes.</summary>
     public Func<string, string, bool>?  ConfirmRequested { get; set; }
 
@@ -516,6 +517,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         IsOperating          = false;
         State                = SystemState.Idle;
         StatusMessage        = "테스트 초기화 완료";
+        TestDataReset?.Invoke(this, EventArgs.Empty);
     }
 
     public void RefreshCounts()

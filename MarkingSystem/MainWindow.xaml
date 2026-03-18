@@ -359,7 +359,7 @@
             <TabItem Header="Lot 조회"
                      Style="{StaticResource AppTabItem}"
                      IsEnabled="{Binding IsTabSwitchable}">
-                <views:LotInquiryView/>
+                <views:LotInquiryView x:Name="LotInquiryViewControl"/>
             </TabItem>
 
             <!-- ══ 탭 3: 생산 Lot 조회 ══ -->

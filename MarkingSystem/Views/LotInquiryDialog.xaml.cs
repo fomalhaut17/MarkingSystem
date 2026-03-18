@@ -20,6 +20,13 @@ public partial class LotInquiryView : UserControl
         ResultDataGrid.ItemsSource = _results;
     }
 
+    public void Clear()
+    {
+        _results.Clear();
+        TxtSearchInput.Clear();
+        StatusText.Text = string.Empty;
+    }
+
     private async void TxtSearchInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -34,13 +41,23 @@ public partial class LotInquiryView : UserControl
         var keyword = TxtSearchInput.Text.Trim();
         if (string.IsNullOrWhiteSpace(keyword)) return;
 
+        StatusText.Text = "조회 중...";
+
         // Lot 코드는 23자 이상 (품번 13 + ':' + Build Site 4 + 년도 2 + J-Date 3)
         // 물류 바코드는 14자 고정 — 길이로 파라미터 구분
         List<LotItem> items;
-        if (keyword.Length >= 23)
-            items = await _api.GetLotsAsync(null, keyword);
-        else
-            items = await _api.GetLotsAsync(keyword, null);
+        try
+        {
+            if (keyword.Length >= 23)
+                items = await _api.GetLotsAsync(null, keyword);
+            else
+                items = await _api.GetLotsAsync(keyword, null);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"조회 오류: {ex.Message}";
+            return;
+        }
 
         _results.Clear();
         for (int i = 0; i < items.Count; i++)
@@ -53,6 +70,10 @@ public partial class LotInquiryView : UserControl
                 Result          = ParseResult(items[i].InspectionResult),
             });
         }
+
+        StatusText.Text = items.Count > 0
+            ? $"조회 결과: {items.Count}건"
+            : "조회 결과가 없습니다.";
     }
 
     private static InspectionResult ParseResult(string s) => s.ToUpperInvariant() switch
@@ -111,7 +132,11 @@ public partial class LotInquiryView : UserControl
     private void MarkDefectBtn_Click(object sender, RoutedEventArgs e)
     {
         var selected = _results.Where(r => r.IsSelected).ToList();
-        if (selected.Count == 0) return;
+        if (selected.Count == 0)
+        {
+            DialogWindow.ShowError(Window.GetWindow(this), "불량 처리할 항목을 선택하세요.", "알림");
+            return;
+        }
 
         if (selected.Any(r => r.Result == InspectionResult.OK))
         {
@@ -128,5 +153,7 @@ public partial class LotInquiryView : UserControl
             entry.IsSelected = false;
             _db.UpdateInspectionResult(entry.MaterialBarcode, entry.LotBarcode, InspectionResult.NG);
         }
+
+        StatusText.Text = $"{selected.Count}건 불량 처리 완료.";
     }
 }

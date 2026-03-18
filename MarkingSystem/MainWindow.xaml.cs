@@ -23,6 +23,7 @@ public partial class MainWindow : Window
 
         _vm.ShowErrorRequested  += OnShowErrorRequested;
         _vm.LogoutRequested     += OnLogoutRequested;
+        _vm.TestDataReset       += (_, _) => LotInquiryViewControl.Clear();
         _vm.ConfirmRequested     = (msg, title)
             => DialogWindow.ShowConfirm(this, msg, title);
         _auth.LogoutRequested   += OnLogoutRequested;
