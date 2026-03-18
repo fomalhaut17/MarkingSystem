@@ -5,8 +5,8 @@ set ENV=%1
 if "%ENV%"=="" (
     echo Usage: build-release.bat [local^|dev]
     echo.
-    echo   local  - Mock API + Mock TCP PLC
-    echo   dev    - Mock API + Mock Cnet Serial PLC
+    echo   local  - Mock API + Mock PLC
+    echo   dev    - Mock API + Real PLC via Serial
     exit /b 1
 )
 
@@ -18,24 +18,17 @@ if not "%ENV%"=="local" if not "%ENV%"=="dev" (
 set OUT=dist\%ENV%
 
 echo.
-echo [1/4] Publishing MarkingSystem (%ENV%)...
+echo [1/3] Publishing %ENV% build...
 dotnet publish MarkingSystem\MarkingSystem.csproj -c Release -o %OUT% --nologo
 if errorlevel 1 (
     echo Publish failed.
     exit /b 1
 )
 
-echo [2/4] Publishing MarkingSystem.Mock (%ENV%)...
-dotnet publish MarkingSystem.Mock\MarkingSystem.Mock.csproj -c Release -o %OUT% --nologo
-if errorlevel 1 (
-    echo Mock publish failed.
-    exit /b 1
-)
-
-echo [3/4] Setting AppMode to %ENV%...
+echo [2/3] Setting AppMode to %ENV%...
 powershell -Command "Set-Content -Path '%OUT%\appsettings.json' -Value '{\"AppMode\":\"%ENV%\"}' -Encoding UTF8"
 
-echo [4/4] Removing unused appsettings files...
+echo [3/3] Removing unused appsettings files...
 for %%e in (local dev prod) do (
     if not "%%e"=="%ENV%" (
         if exist %OUT%\appsettings.%%e.json del /f /q %OUT%\appsettings.%%e.json
@@ -46,15 +39,12 @@ echo.
 echo Done.
 echo Output folder: %OUT%\
 echo   MarkingSystem.exe
-echo   MarkingSystem.Mock.exe
 echo   appsettings.json        AppMode: %ENV%
 echo   appsettings.%ENV%.json
-echo.
 if "%ENV%"=="local" (
-    echo NOTE: Run MarkingSystem.Mock.exe first, then MarkingSystem.exe
-)
-if "%ENV%"=="dev" (
-    echo NOTE: Run MarkingSystem.Mock.exe first (reads appsettings), then MarkingSystem.exe
+    echo.
+    echo NOTE: Tester must also run mock servers before launching the app.
+    echo       Copy mock-api\ and mock-plc\ folders and run run-local-mock.bat
 )
 
 endlocal

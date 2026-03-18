@@ -26,6 +26,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     private readonly AuthService     _auth;
     private readonly MarkingSettings _markingSettings;
     private CancellationTokenSource? _markingCts;
+    private CancellationTokenSource? _scannerCts;
 
     private int  _inFlightCount        = 0;     // 전송 후 스캐너 확인 대기 중인 배치 수
     private bool _isStoppingInProgress = false; // 발행 종료 대기 중 (중복 클릭 방지)
@@ -49,7 +50,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                   && LotEntries.Any(e => e.Result == InspectionResult.NotIssued));
         StopPublishCommand     = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating && !_isStoppingInProgress);
         MarkDefectCommand      = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
-        SaveResultCommand      = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
+        SaveResultCommand      = new RelayCommand(ExecuteSaveResult,
+            () => State == SystemState.ResultReady
+               && LotEntries.All(e => e.Result != InspectionResult.NotIssued));
         SelectAllCommand       = new RelayCommand(ExecuteSelectAll);
         DeselectAllCommand     = new RelayCommand(ExecuteDeselectAll);
         LogoutCommand          = new RelayCommand(ExecuteLogout);
@@ -257,12 +260,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage = "PLC 연결 중...";
 
         _markingCts?.Dispose();
+        _scannerCts?.Dispose();
         _markingCts = new CancellationTokenSource();
+        _scannerCts = new CancellationTokenSource();
 
-        await RunMarkingSessionAsync(_markingCts.Token);
+        await RunMarkingSessionAsync(_markingCts.Token, _scannerCts.Token);
     }
 
-    private async Task RunMarkingSessionAsync(CancellationToken ct)
+    private async Task RunMarkingSessionAsync(CancellationToken ct, CancellationToken scannerCt)
     {
         if (!await _plc.ConnectAsync(ct))
         {
@@ -278,7 +283,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         using var loopDoneCts = new CancellationTokenSource();
 
         var t1 = BarcodeRequestLoopAsync(buffer, loopDoneCts, ct);
-        var t2 = ScannerResultLoopAsync(buffer, loopDoneCts.Token, ct);
+        var t2 = ScannerResultLoopAsync(buffer, loopDoneCts.Token, scannerCt);
         try
         {
             await Task.WhenAll(t1, t2);
@@ -427,6 +432,10 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _isStoppingInProgress = true;
         RelayCommand.Invalidate();
 
+        // 먼저 취소 → BarcodeRequestLoop가 새 항목 전송을 중단
+        _markingCts?.Cancel();
+
+        // 이미 전송된(Pending) 항목만 완료 대기 (ScannerResultLoop는 아직 동작 중)
         if (_inFlightCount > 0)
         {
             StatusMessage = "전송 완료 대기 중...";
@@ -440,7 +449,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
                     "일부 항목이 Pending 상태로 남을 수 있습니다.");
         }
 
-        _markingCts?.Cancel();
+        // Pending 처리 완료 후 ScannerResultLoop도 종료
+        _scannerCts?.Cancel();
+
         _isStoppingInProgress = false;
         IsOperating           = false;
         State                 = SystemState.ResultReady;
@@ -539,6 +550,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _markingCts?.Dispose();
+        _scannerCts?.Dispose();
         _clockTimer.Dispose();
         _plc.Dispose();
     }
