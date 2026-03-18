@@ -21,6 +21,9 @@ public partial class MainWindow : Window
 
         _vm.ShowErrorRequested  += OnShowErrorRequested;
         _vm.LogoutRequested     += OnLogoutRequested;
+        _vm.ConfirmRequested     = (msg, title)
+            => MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+               == MessageBoxResult.Yes;
         _auth.LogoutRequested   += OnLogoutRequested;
     }
 

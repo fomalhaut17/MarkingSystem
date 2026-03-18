@@ -90,7 +90,7 @@ public partial class LotInquiryView : UserControl
         {
             entry.Result     = InspectionResult.NG;
             entry.IsSelected = false;
-            _db.UpdateInspectionResult(entry.LotBarcode, InspectionResult.NG);
+            _db.UpdateInspectionResult(entry.MaterialBarcode, entry.LotBarcode, InspectionResult.NG);
         }
     }
 }

@@ -51,8 +51,9 @@ public sealed class LocalDatabase
                     ON issue_log (material_barcode);
                 CREATE INDEX IF NOT EXISTS idx_lot_code
                     ON issue_log (lot_code);
-                CREATE UNIQUE INDEX IF NOT EXISTS uq_lot_code_ser
-                    ON issue_log (lot_code, lot_ser);
+                DROP INDEX IF EXISTS uq_lot_code_ser;
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_material_lot_ser
+                    ON issue_log (material_barcode, lot_code, lot_ser);
                 """;
             cmd.ExecuteNonQuery();
         }
@@ -67,7 +68,7 @@ public sealed class LocalDatabase
         using var conn = OpenConnection();
         using var cmd  = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO issue_log
+            INSERT OR IGNORE INTO issue_log
                 (material_barcode, lot_code, lot_ser,
                  inspection_result, is_result_saved, created_at, updated_at)
             VALUES ($mb, $lc, $ls, 'Pending', 0, $now, $now)
@@ -80,17 +81,18 @@ public sealed class LocalDatabase
     }
 
     /// <summary>스캐너 검사 결과(OK/AD) 또는 불량 처리(NG) 시 호출.</summary>
-    public void UpdateInspectionResult(string lotBarcode, InspectionResult result)
+    public void UpdateInspectionResult(string materialBarcode, string lotBarcode, InspectionResult result)
     {
         using var conn = OpenConnection();
         using var cmd  = conn.CreateCommand();
         cmd.CommandText = """
             UPDATE issue_log
                SET inspection_result = $result, updated_at = $now
-             WHERE lot_code = $lc AND lot_ser = $ls AND is_result_saved = 0
+             WHERE material_barcode = $mb AND lot_code = $lc AND lot_ser = $ls AND is_result_saved = 0
             """;
         cmd.Parameters.AddWithValue("$result", result.ToString());
         cmd.Parameters.AddWithValue("$now",    Now());
+        cmd.Parameters.AddWithValue("$mb",     materialBarcode);
         cmd.Parameters.AddWithValue("$lc",     ParseLotCode(lotBarcode));
         cmd.Parameters.AddWithValue("$ls",     ParseLotSer(lotBarcode));
         cmd.ExecuteNonQuery();

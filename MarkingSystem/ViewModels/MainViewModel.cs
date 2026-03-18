@@ -136,6 +136,8 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<string>?  ShowErrorRequested;
     public event EventHandler?          LogoutRequested;
+    /// <summary>확인창 요청. message, title → true=Yes.</summary>
+    public Func<string, string, bool>?  ConfirmRequested { get; set; }
 
     // ── Private Methods ──────────────────────────────────────────────────────
 
@@ -243,10 +245,18 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage = $"발행 중...  (총 {LotEntries.Count}개)";
 
         var buffer = new ConcurrentQueue<(LotEntry e1, LotEntry? e2)>();
+        using var loopDoneCts = new CancellationTokenSource();
 
-        var t1 = BarcodeRequestLoopAsync(buffer, ct);
-        var t2 = ScannerResultLoopAsync(buffer, ct);
-        await Task.WhenAll(t1, t2);
+        var t1 = BarcodeRequestLoopAsync(buffer, loopDoneCts, ct);
+        var t2 = ScannerResultLoopAsync(buffer, loopDoneCts.Token, ct);
+        try
+        {
+            await Task.WhenAll(t1, t2);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            ShowErrorRequested?.Invoke(this, $"발행 중 오류가 발생했습니다.\n{ex.Message}");
+        }
 
         _plc.Disconnect();
 
@@ -263,8 +273,12 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     /// NotIssued 항목이 없거나 취소 시 종료.
     /// </summary>
     private async Task BarcodeRequestLoopAsync(
-        ConcurrentQueue<(LotEntry, LotEntry?)> buffer, CancellationToken ct)
+        ConcurrentQueue<(LotEntry, LotEntry?)> buffer,
+        CancellationTokenSource loopDoneCts,
+        CancellationToken ct)
     {
+        try
+        {
         while (!ct.IsCancellationRequested)
         {
             // 다음에 발행할 NotIssued 항목 탐색 (UI 스레드에서 접근)
@@ -319,6 +333,11 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             // 스캐너 검사 루프에 전달
             buffer.Enqueue((e1, e2));
         }
+        }
+        finally
+        {
+            loopDoneCts.Cancel(); // ScannerResultLoop에게 더 이상 항목이 없음을 알림
+        }
     }
 
     /// <summary>
@@ -326,14 +345,16 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     /// 버퍼가 비어 있고 취소 요청 시 종료.
     /// </summary>
     private async Task ScannerResultLoopAsync(
-        ConcurrentQueue<(LotEntry, LotEntry?)> buffer, CancellationToken ct)
+        ConcurrentQueue<(LotEntry, LotEntry?)> buffer,
+        CancellationToken loopDone,   // BarcodeRequestLoop 종료 시 시그널
+        CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested || !buffer.IsEmpty)
+        while (!loopDone.IsCancellationRequested || !buffer.IsEmpty)
         {
             // 버퍼에 항목이 생길 때까지 대기
             if (!buffer.TryPeek(out _))
             {
-                if (ct.IsCancellationRequested) return;
+                if (loopDone.IsCancellationRequested) return; // 더 이상 항목이 오지 않음
                 try { await Task.Delay(50, ct); } catch (OperationCanceledException) { return; }
                 continue;
             }
@@ -355,14 +376,14 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             var result1 = sc1 == e1.LotBarcode ? InspectionResult.OK : InspectionResult.AD;
             e1.Result    = result1;
             e1.IsSelected = result1 != InspectionResult.OK;
-            _db.UpdateInspectionResult(e1.LotBarcode, result1);
+            _db.UpdateInspectionResult(e1.MaterialBarcode, e1.LotBarcode, result1);
 
             if (e2 != null)
             {
                 var result2 = sc2 == e2.LotBarcode ? InspectionResult.OK : InspectionResult.AD;
                 e2.Result    = result2;
                 e2.IsSelected = result2 != InspectionResult.OK;
-                _db.UpdateInspectionResult(e2.LotBarcode, result2);
+                _db.UpdateInspectionResult(e2.MaterialBarcode, e2.LotBarcode, result2);
             }
 
             await _plc.ClearScannedBarcodesAsync();
@@ -398,11 +419,21 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void ExecuteMarkDefect()
     {
-        foreach (var entry in LotEntries.Where(e => e.IsSelected).ToList())
+        var selected = LotEntries.Where(e => e.IsSelected).ToList();
+        if (selected.Count == 0) return;
+
+        bool hasOk = selected.Any(e => e.Result == InspectionResult.OK);
+        string msg = hasOk
+            ? "양품으로 판정된 항목이 포함되어 있습니다.\n불량 처리하시겠습니까?"
+            : "선택된 항목을 불량(NG) 처리하시겠습니까?";
+
+        if (ConfirmRequested?.Invoke(msg, "불량 처리 확인") != true) return;
+
+        foreach (var entry in selected)
         {
             entry.Result     = InspectionResult.NG;
             entry.IsSelected = false;
-            _db.UpdateInspectionResult(entry.LotBarcode, InspectionResult.NG);
+            _db.UpdateInspectionResult(entry.MaterialBarcode, entry.LotBarcode, InspectionResult.NG);
         }
         RefreshCounts();
         StatusMessage = "선택된 항목을 불량(NG) 처리했습니다.";
