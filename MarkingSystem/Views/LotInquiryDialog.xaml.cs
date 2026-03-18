@@ -10,7 +10,8 @@ namespace MarkingSystem.Views;
 public partial class LotInquiryView : UserControl
 {
     private readonly ObservableCollection<LotEntry> _results = [];
-    private readonly LocalDatabase _db = new();
+    private readonly LocalDatabase                  _db  = new();
+    private readonly WizMesApiClient                _api = new(App.Settings.Api.BaseUrl, App.Auth);
 
     public LotInquiryView()
     {
@@ -18,33 +19,48 @@ public partial class LotInquiryView : UserControl
         ResultDataGrid.ItemsSource = _results;
     }
 
-    private void TxtSearchInput_KeyDown(object sender, KeyEventArgs e)
+    private async void TxtSearchInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
-            ExecuteSearch();
+            await ExecuteSearch();
     }
 
-    private void SearchBtn_Click(object sender, RoutedEventArgs e)
-        => ExecuteSearch();
+    private async void SearchBtn_Click(object sender, RoutedEventArgs e)
+        => await ExecuteSearch();
 
-    private void ExecuteSearch()
+    private async Task ExecuteSearch()
     {
         var keyword = TxtSearchInput.Text.Trim();
         if (string.IsNullOrWhiteSpace(keyword)) return;
 
-        // TODO: wizMES 연동 후 실제 조회로 교체
+        // Lot 코드는 23자 이상 (품번 13 + ':' + Build Site 4 + 년도 2 + J-Date 3)
+        // 물류 바코드는 14자 고정 — 길이로 파라미터 구분
+        List<LotItem> items;
+        if (keyword.Length >= 23)
+            items = await _api.GetLotsAsync(null, keyword);
+        else
+            items = await _api.GetLotsAsync(keyword, null);
+
         _results.Clear();
-        for (int i = 1; i <= 5; i++)
+        for (int i = 0; i < items.Count; i++)
         {
             _results.Add(new LotEntry
             {
-                Sequence        = i,
-                MaterialBarcode = keyword,
-                LotBarcode      = "2026031401ABCDE23045678" + i.ToString("D6"),
-                Result          = (InspectionResult)(i % 4),
+                Sequence        = i + 1,
+                MaterialBarcode = items[i].MaterialBarcode,
+                LotBarcode      = items[i].LotBarcode,
+                Result          = ParseResult(items[i].InspectionResult),
             });
         }
     }
+
+    private static InspectionResult ParseResult(string s) => s.ToUpperInvariant() switch
+    {
+        "OK" => InspectionResult.OK,
+        "NG" => InspectionResult.NG,
+        "AD" => InspectionResult.AD,
+        _    => InspectionResult.Pending,
+    };
 
     private void HeaderCheckBox_Click(object sender, RoutedEventArgs e)
     {

@@ -408,10 +408,21 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         StatusMessage = "선택된 항목을 불량(NG) 처리했습니다.";
     }
 
-    private void ExecuteSaveResult()
+    private async void ExecuteSaveResult()
     {
-        if (CurrentMaterial != null)
-            _db.SetResultSaved(CurrentMaterial.MaterialBarcode);
+        if (CurrentMaterial == null) return;
+
+        var entries = LotEntries
+            .Where(e => e.Result == InspectionResult.OK ||
+                        e.Result == InspectionResult.NG ||
+                        e.Result == InspectionResult.AD)
+            .Select(e => new IssueResultDto(e.LotBarcode, e.Result.ToString()))
+            .ToList();
+
+        if (entries.Count > 0)
+            await _api.PostIssueResultsAsync(CurrentMaterial.MaterialBarcode, entries);
+
+        _db.SetResultSaved(CurrentMaterial.MaterialBarcode);
 
         StatusMessage = $"결과 저장 완료  (OK: {OkCount}, NG: {NgCount})";
         State         = SystemState.Idle;

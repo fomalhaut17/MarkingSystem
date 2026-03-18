@@ -47,6 +47,28 @@ public sealed class WizMesApiClient
         return wrapper?.Success == true ? wrapper.Data?.SavedCount ?? 0 : 0;
     }
 
+    // ── API 3: Lot 목록 조회 ─────────────────────────────────────────────────
+
+    public async Task<List<LotItem>> GetLotsAsync(string? materialBarcode, string? lotCode)
+    {
+        var query   = materialBarcode != null
+            ? $"materialBarcode={Uri.EscapeDataString(materialBarcode)}"
+            : $"lotCode={Uri.EscapeDataString(lotCode!)}";
+        var wrapper = await SendWithRetryAsync<LotListResponse>(
+            () => BuildGet($"{_baseUrl}/lots?{query}"));
+        return wrapper?.Success == true ? wrapper.Data?.Items ?? [] : [];
+    }
+
+    // ── API 4: 생산 Lot 상세 조회 ─────────────────────────────────────────────
+
+    public async Task<ProductionLotInfo?> GetProductionLotAsync(string lotCode)
+    {
+        var url     = $"{_baseUrl}/production-lots/{Uri.EscapeDataString(lotCode)}";
+        var wrapper = await SendWithRetryAsync<ProductionLotInfo>(
+            () => BuildGet(url));
+        return wrapper?.Success == true ? wrapper.Data : null;
+    }
+
     // ── 내부 헬퍼 ────────────────────────────────────────────────────────────
 
     private HttpRequestMessage BuildGet(string url)
@@ -97,6 +119,12 @@ public sealed class WizMesApiClient
 public sealed record IssueResultDto(
     [property: JsonPropertyName("lotBarcode")]       string LotBarcode,
     [property: JsonPropertyName("inspectionResult")] string InspectionResult);
+
+sealed class LotListResponse
+{
+    [JsonPropertyName("items")]      public List<LotItem>? Items      { get; init; }
+    [JsonPropertyName("totalCount")] public int            TotalCount { get; init; }
+}
 
 sealed class IssueResultResponse
 {

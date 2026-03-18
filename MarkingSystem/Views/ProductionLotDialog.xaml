@@ -159,7 +159,7 @@
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto">
                 <Border BorderBrush="#AAAAAA" BorderThickness="1">
-                    <Grid>
+                    <Grid x:Name="InjGrid">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="110"/>
