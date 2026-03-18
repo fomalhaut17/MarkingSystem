@@ -11,7 +11,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git tag:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(curl -s http://localhost:3000/api/marking/materials/98765432109876)",
+      "Bash(echo.)",
+      "Bash(curl -s \"http://localhost:3000/api/marking/lots?materialBarcode=98765432109876\")",
+      "Bash(taskkill /F /IM node.exe /T)",
+      "Bash(exit 0)"
     ]
   }
 }

@@ -1,26 +1,67 @@
 {
-  "materials": [
+  "mock_products": [
+    { "productCode": "P2063121-B1-A", "productName": "플라스틱 커버 어셈블리" },
+    { "productCode": "P2063121-B1-B", "productName": "메탈 브라켓 B형" }
+  ],
+
+  "mock_lots": [
     {
-      "materialBarcode": "12345678901234",
-      "productName": "플라스틱 커버 어셈블리",
-      "manufactureDate": "2026-03-14",
-      "containerQty": "10",
       "lotCode": "P2063121-B1-A:SHVB26073",
-      "lastIssuedSer": "000000",
+      "productCode": "P2063121-B1-A",
+      "manufactureDate": "2026-03-14",
       "productionEquipment": "사출기-01",
       "productionMold": "금형-A",
       "lotProductionQty": "500"
     },
     {
-      "materialBarcode": "98765432109876",
-      "productName": "메탈 브라켓 B형",
+      "lotCode": "P2063121-B1-A:SHVB26074",
+      "productCode": "P2063121-B1-A",
       "manufactureDate": "2026-03-15",
-      "containerQty": "5",
+      "productionEquipment": "사출기-01",
+      "productionMold": "금형-A",
+      "lotProductionQty": "500"
+    },
+    {
       "lotCode": "P2063121-B1-B:SHVB26074",
-      "lastIssuedSer": "000003",
+      "productCode": "P2063121-B1-B",
+      "manufactureDate": "2026-03-15",
       "productionEquipment": "사출기-02",
       "productionMold": "금형-B",
       "lotProductionQty": "200"
     }
+  ],
+
+  "mock_materials": [
+    { "materialBarcode": "12345678901234", "lotCode": "P2063121-B1-A:SHVB26073", "containerQty": "10" },
+    { "materialBarcode": "98765432109876", "lotCode": "P2063121-B1-B:SHVB26074", "containerQty": "5"  },
+    { "materialBarcode": "11111111111111", "lotCode": "P2063121-B1-A:SHVB26073", "containerQty": "10" }
+  ],
+
+  "mock_issue_results": [
+    { "id": 1, "materialBarcode": "98765432109876", "lotBarcode": "P2063121-B1-B:SHVB26074000001", "inspectionResult": "OK", "savedAt": "2026-03-15T09:00:00" },
+    { "id": 2, "materialBarcode": "98765432109876", "lotBarcode": "P2063121-B1-B:SHVB26074000002", "inspectionResult": "OK", "savedAt": "2026-03-15T09:00:01" },
+    { "id": 3, "materialBarcode": "98765432109876", "lotBarcode": "P2063121-B1-B:SHVB26074000003", "inspectionResult": "NG", "savedAt": "2026-03-15T09:00:02" }
+  ],
+
+  "mock_injection_conditions": [
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "성형조건1차", "rowName": "온도(°C)",       "h1": {"set":"220","act":"219"}, "h2": {"set":"225","act":"224"}, "h3": {"set":"230","act":"229"}, "h4": {"set":"220","act":"220"}, "h5": {"set":"215","act":"214"} },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "성형조건1차", "rowName": "압력(Kg/cm2)",   "h1": {"set":"120","act":"118"}, "h2": {"set":"130","act":"129"}, "h3": {"set":"125","act":"124"}, "h4": {"set":"115","act":"115"}, "h5": {"set":"110","act":"109"} },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "성형조건1차", "rowName": "속도(%)",        "h1": {"set":"60", "act":"59"},  "h2": {"set":"65", "act":"64"},  "h3": {"set":"55", "act":"55"},  "h4": {"set":"50", "act":"50"},  "h5": {"set":"45", "act":"44"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "계량조건",    "rowName": "압력(Kg/cm2)",   "h1": {"set":"80", "act":"79"},  "h2": {"set":"80", "act":"80"},  "h3": {"set":"80", "act":"80"},  "h4": {"set":"80", "act":"79"},  "h5": {"set":"80", "act":"80"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "계량조건",    "rowName": "속도(%)",        "h1": {"set":"70", "act":"70"},  "h2": {"set":"70", "act":"69"},  "h3": {"set":"70", "act":"70"},  "h4": {"set":"70", "act":"70"},  "h5": {"set":"70", "act":"70"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "계량조건",    "rowName": "위치(mm)",       "h1": {"set":"45", "act":"44"},  "h2": {"set":"45", "act":"45"},  "h3": {"set":"45", "act":"45"},  "h4": {"set":"45", "act":"44"},  "h5": {"set":"45", "act":"45"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "보압",        "rowName": "압력(Kg/cm2)",   "h1": {"set":"90", "act":"89"},  "h2": {"set":"85", "act":"85"},  "h3": {"set":"80", "act":"80"},  "h4": {"set":"75", "act":"74"},  "h5": {"set":"70", "act":"70"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "보압",        "rowName": "속도(%)",        "h1": {"set":"40", "act":"39"},  "h2": {"set":"40", "act":"40"},  "h3": {"set":"40", "act":"40"},  "h4": {"set":"40", "act":"40"},  "h5": {"set":"40", "act":"39"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "보압",        "rowName": "시간(초)",       "h1": {"set":"3",  "act":"3"},   "h2": {"set":"3",  "act":"3"},   "h3": {"set":"3",  "act":"3"},   "h4": {"set":"3",  "act":"3"},   "h5": {"set":"3",  "act":"3"}   },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "HOT RUNNER",  "rowName": "1-4",            "h1": {"set":"210","act":"210"}, "h2": {"set":"210","act":"209"}, "h3": {"set":"210","act":"210"}, "h4": {"set":"210","act":"210"}, "h5": {"set":"210","act":"211"} },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "HOT RUNNER",  "rowName": "5-8",            "h1": {"set":"210","act":"210"}, "h2": {"set":"210","act":"210"}, "h3": {"set":"210","act":"209"}, "h4": {"set":"210","act":"210"}, "h5": {"set":"210","act":"210"} },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "냉각시간",    "rowName": "",               "h1": {"set":"15", "act":"15"},  "h2": {"set":"15", "act":"15"},  "h3": {"set":"15", "act":"15"},  "h4": {"set":"15", "act":"15"},  "h5": {"set":"15", "act":"15"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "금형보호",    "rowName": "",               "h1": {"set":"20", "act":"20"},  "h2": {"set":"20", "act":"20"},  "h3": {"set":"20", "act":"20"},  "h4": {"set":"20", "act":"20"},  "h5": {"set":"20", "act":"20"}  },
+    { "lotCode": "P2063121-B1-A:SHVB26073", "groupName": "가스위치",    "rowName": "",               "h1": {"set":"5",  "act":"5"},   "h2": {"set":"5",  "act":"5"},   "h3": {"set":"5",  "act":"5"},   "h4": {"set":"5",  "act":"5"},   "h5": {"set":"5",  "act":"5"}   },
+
+    { "lotCode": "P2063121-B1-B:SHVB26074", "groupName": "성형조건1차", "rowName": "온도(°C)",       "h1": {"set":"215","act":"214"}, "h2": {"set":"220","act":"220"}, "h3": {"set":"225","act":"224"}, "h4": {"set":"215","act":"215"}, "h5": {"set":"210","act":"209"} },
+    { "lotCode": "P2063121-B1-B:SHVB26074", "groupName": "성형조건1차", "rowName": "압력(Kg/cm2)",   "h1": {"set":"115","act":"114"}, "h2": {"set":"120","act":"120"}, "h3": {"set":"120","act":"119"}, "h4": {"set":"110","act":"110"}, "h5": {"set":"105","act":"104"} },
+    { "lotCode": "P2063121-B1-B:SHVB26074", "groupName": "성형조건1차", "rowName": "속도(%)",        "h1": {"set":"55", "act":"54"},  "h2": {"set":"60", "act":"60"},  "h3": {"set":"55", "act":"55"},  "h4": {"set":"50", "act":"49"},  "h5": {"set":"45", "act":"45"}  },
+    { "lotCode": "P2063121-B1-B:SHVB26074", "groupName": "냉각시간",    "rowName": "",               "h1": {"set":"12", "act":"12"},  "h2": {"set":"12", "act":"12"},  "h3": {"set":"12", "act":"12"},  "h4": {"set":"12", "act":"12"},  "h5": {"set":"12", "act":"12"}  }
   ]
 }
