@@ -1,6 +1,6 @@
-const jsonServer = require('json-server')
-const server     = jsonServer.create()
-const router     = jsonServer.router('db.json')
+const jsonServer  = require('json-server')
+const server      = jsonServer.create()
+const router      = jsonServer.router('db.json')
 const middlewares = jsonServer.defaults({ logger: true })
 
 server.use(middlewares)
@@ -28,10 +28,13 @@ function unauthorized(res, code, message) {
 
 function db() { return router.db }
 
-// mock_issue_results 는 순수 JS 배열로 직접 관리
-// → POST /issue-results 로 추가된 데이터가 같은 세션 내 GET 에 즉시 반영됨 (재시작 시 db.json 초기 상태로 리셋)
+// mock_issue_results: 시작 시 db.json에서 로드, POST/reset 시 db.json에 flush
 const issueResultsStore = router.db.get('mock_issue_results').value().slice()
 let   nextIssueId       = issueResultsStore.reduce((max, r) => Math.max(max, r.id), 0) + 1
+
+function flushIssueResults() {
+  router.db.set('mock_issue_results', issueResultsStore).write()
+}
 
 // ── 인증 Mock 상태 ────────────────────────────────────────────────────────────
 // 테스트 계정: companyCode=MANNTEK / admin / 1234
@@ -91,13 +94,22 @@ server.post('/auth/refresh', (req, res) => {
 
 // ── API 1: 자재 정보 조회  GET /api/marking/materials/:materialBarcode ─────────
 // mock_materials → mock_lots → mock_products 조인
-// lastIssuedSer: mock_issue_results 에서 MAX(lotSer) 동적 계산
+// 미등록 바코드: 첫 번째 Lot에 연결한 합성 자재로 처리 (테스트 편의)
+// lastIssuedSer: mock_issue_results 에서 해당 Lot 전체 기준 MAX(lotSer) 동적 계산
 
 server.get('/api/marking/materials/:materialBarcode', (req, res) => {
-  const barcode  = req.params.materialBarcode
-  const material = db().get('mock_materials').find({ materialBarcode: barcode }).value()
+  const barcode = req.params.materialBarcode
+  let   material = db().get('mock_materials').find({ materialBarcode: barcode }).value()
+  let   synthetic = false
+
   if (!material) {
-    return notFound(res, 'MATERIAL_NOT_FOUND', '물류 바코드에 해당하는 자재를 찾을 수 없습니다.')
+    // 미등록 바코드 → 첫 번째 Lot에 연결한 합성 자재
+    const defaultLot = db().get('mock_lots').first().value()
+    if (!defaultLot) {
+      return notFound(res, 'MATERIAL_NOT_FOUND', '물류 바코드에 해당하는 자재를 찾을 수 없습니다.')
+    }
+    material = { materialBarcode: barcode, lotCode: defaultLot.lotCode, containerQty: '10' }
+    synthetic = true
   }
 
   const lot = db().get('mock_lots').find({ lotCode: material.lotCode }).value()
@@ -110,13 +122,15 @@ server.get('/api/marking/materials/:materialBarcode', (req, res) => {
     return notFound(res, 'PRODUCT_NOT_FOUND', '연결된 품목 정보를 찾을 수 없습니다.')
   }
 
-  // lastIssuedSer: 해당 물류 바코드의 발행 결과 중 가장 큰 Ser 값
-  const results = issueResultsStore.filter(r => r.materialBarcode === barcode)
-  const lastIssuedSer = results.length > 0
-    ? results.map(r => r.lotBarcode.slice(-6)).reduce((max, ser) => ser > max ? ser : max, '000000')
+  // lastIssuedSer: 해당 Lot 전체(모든 물류 바코드)의 최대 Ser 값
+  const lotBarcodes = db().get('mock_materials').filter({ lotCode: material.lotCode }).map('materialBarcode').value()
+  if (synthetic) lotBarcodes.push(barcode)
+  const lotResults    = issueResultsStore.filter(r => lotBarcodes.includes(r.materialBarcode))
+  const lastIssuedSer = lotResults.length > 0
+    ? lotResults.map(r => r.lotBarcode.slice(-6)).reduce((max, ser) => ser > max ? ser : max, '000000')
     : '000000'
 
-  console.log(`[materials] barcode=${barcode} lotCode=${material.lotCode} lastIssuedSer=${lastIssuedSer}`)
+  console.log(`[materials] barcode=${barcode}${synthetic ? ' (synthetic)' : ''} lotCode=${material.lotCode} lastIssuedSer=${lastIssuedSer}`)
 
   ok(res, {
     materialBarcode:     barcode,
@@ -132,7 +146,7 @@ server.get('/api/marking/materials/:materialBarcode', (req, res) => {
 })
 
 // ── API 2: 발행 결과 일괄 전송  POST /api/marking/issue-results ──────────────
-// mock_issue_results 에 INSERT (인메모리, 재시작 시 리셋)
+// mock_issue_results 에 INSERT 후 db.json 에 flush
 
 server.post('/api/marking/issue-results', (req, res) => {
   const { materialBarcode, results } = req.body || {}
@@ -153,6 +167,8 @@ server.post('/api/marking/issue-results', (req, res) => {
     })
   })
 
+  flushIssueResults()
+
   console.log(`[issue-results] materialBarcode=${materialBarcode} count=${results.length}`)
   results.forEach(r => console.log(`  ${r.lotBarcode} → ${r.inspectionResult}`))
 
@@ -160,7 +176,6 @@ server.post('/api/marking/issue-results', (req, res) => {
 })
 
 // ── API 3: Lot 목록 조회  GET /api/marking/lots ───────────────────────────────
-// mock_issue_results 에서 조회
 
 server.get('/api/marking/lots', (req, res) => {
   const { materialBarcode, lotCode } = req.query
@@ -173,7 +188,6 @@ server.get('/api/marking/lots', (req, res) => {
   if (materialBarcode) {
     results = issueResultsStore.filter(r => r.materialBarcode === materialBarcode)
   } else {
-    // lotCode 검색: 해당 Lot의 모든 물류 바코드를 찾아 결과 조회
     const barcodes = db().get('mock_materials').filter({ lotCode }).map('materialBarcode').value()
     results = issueResultsStore.filter(r => barcodes.includes(r.materialBarcode))
   }
@@ -189,8 +203,6 @@ server.get('/api/marking/lots', (req, res) => {
 })
 
 // ── API 4: 생산 Lot 상세 조회  GET /api/marking/production-lots/:lotCode ──────
-// mock_lots → mock_products 조인 + mock_injection_conditions
-// okCount/ngCount: mock_issue_results 에서 동적 계산
 
 server.get('/api/marking/production-lots/:lotCode', (req, res) => {
   const lotCode = req.params.lotCode
@@ -204,7 +216,6 @@ server.get('/api/marking/production-lots/:lotCode', (req, res) => {
 
   const injectionConditions = db().get('mock_injection_conditions').filter({ lotCode }).value()
 
-  // okCount / ngCount: 해당 Lot의 모든 물류 바코드 발행 결과 집계
   const barcodes   = db().get('mock_materials').filter({ lotCode }).map('materialBarcode').value()
   const allResults = issueResultsStore.filter(r => barcodes.includes(r.materialBarcode))
   const okCount    = allResults.filter(r => r.inspectionResult === 'OK').length
@@ -225,6 +236,26 @@ server.get('/api/marking/production-lots/:lotCode', (req, res) => {
   })
 })
 
+// ── TEST: 초기화  DELETE /api/marking/test/reset ──────────────────────────────
+// 테스트 모드(local/dev)에서만 사용. issueResultsStore 전체 삭제 후 db.json flush.
+
+server.delete('/api/marking/test/reset', (req, res) => {
+  const { materialBarcode } = req.query
+  if (!materialBarcode) {
+    return badRequest(res, 'MISSING_QUERY_PARAM', 'materialBarcode 파라미터가 필요합니다.')
+  }
+  const before = issueResultsStore.length
+  const indices = issueResultsStore
+    .map((r, i) => r.materialBarcode === materialBarcode ? i : -1)
+    .filter(i => i >= 0)
+    .reverse()
+  indices.forEach(i => issueResultsStore.splice(i, 1))
+  const cleared = before - issueResultsStore.length
+  flushIssueResults()
+  console.log(`[test/reset] materialBarcode=${materialBarcode} cleared=${cleared}`)
+  ok(res, { clearedCount: cleared })
+})
+
 // ── 시작 ──────────────────────────────────────────────────────────────────────
 
 const PORT = 3000
@@ -232,15 +263,14 @@ server.listen(PORT, () => {
   console.log('')
   console.log('  wizMES Mock API  ->  http://localhost:' + PORT)
   console.log('  [Auth]')
-  console.log('    POST /auth/login              (MANNTEK / admin / 1234)')
-  console.log('    POST /auth/refresh')
+  console.log('    POST   /auth/login              (MANNTEK / admin / 1234)')
+  console.log('    POST   /auth/refresh')
   console.log('  [Marking]')
-  console.log('    GET  /api/marking/materials/:materialBarcode')
-  console.log('         12345678901234  미발행')
-  console.log('         98765432109876  부분발행 (3건)')
-  console.log('         11111111111111  동일 Lot, 다른 컨테이너')
-  console.log('    POST /api/marking/issue-results')
-  console.log('    GET  /api/marking/lots?materialBarcode=... | ?lotCode=...')
-  console.log('    GET  /api/marking/production-lots/:lotCode')
+  console.log('    GET    /api/marking/materials/:materialBarcode  (* 미등록 바코드도 수용)')
+  console.log('    POST   /api/marking/issue-results              (db.json 영속화)')
+  console.log('    GET    /api/marking/lots?materialBarcode=... | ?lotCode=...')
+  console.log('    GET    /api/marking/production-lots/:lotCode')
+  console.log('  [Test]')
+  console.log('    DELETE /api/marking/test/reset?materialBarcode= (해당 물류 바코드 issueResults 삭제)')
   console.log('')
 })

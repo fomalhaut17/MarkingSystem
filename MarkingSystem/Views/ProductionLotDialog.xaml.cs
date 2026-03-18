@@ -42,8 +42,7 @@ public partial class ProductionLotView : UserControl
         var info = await _api.GetProductionLotAsync(lotCode);
         if (info == null)
         {
-            MessageBox.Show("해당 Lot 코드를 찾을 수 없습니다.", "조회 결과 없음",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogWindow.ShowError(Window.GetWindow(this), "해당 Lot 코드를 찾을 수 없습니다.", "조회 결과 없음");
             return;
         }
 

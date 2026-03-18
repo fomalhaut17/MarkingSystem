@@ -1,4 +1,8 @@
 @echo off
+echo Killing processes on ports 3000 and 2004...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000 "') do taskkill /f /pid %%a 2>nul
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":2004 "') do taskkill /f /pid %%a 2>nul
+
 echo [1/3] Installing mock API packages...
 pushd "%~dp0mock-api"
 call npm install --silent

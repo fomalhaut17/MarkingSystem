@@ -69,6 +69,20 @@ public sealed class WizMesApiClient
         return wrapper?.Success == true ? wrapper.Data : null;
     }
 
+    // ── TEST: 초기화 ──────────────────────────────────────────────────────────
+
+    public async Task ResetTestDataAsync(string materialBarcode)
+    {
+        try
+        {
+            var url = $"{_baseUrl}/test/reset?materialBarcode={Uri.EscapeDataString(materialBarcode)}";
+            var req = new HttpRequestMessage(HttpMethod.Delete, url);
+            AttachToken(req);
+            await _http.SendAsync(req);
+        }
+        catch { /* 실패해도 무시 */ }
+    }
+
     // ── 내부 헬퍼 ────────────────────────────────────────────────────────────
 
     private HttpRequestMessage BuildGet(string url)

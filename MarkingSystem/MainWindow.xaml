@@ -29,6 +29,8 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="8"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
@@ -39,13 +41,21 @@
                        VerticalAlignment="Center"/>
 
             <Button Grid.Column="2"
+                    Content="테스트 초기화"
+                    Command="{Binding ResetTestDataCommand}"
+                    Style="{StaticResource ToolbarButton}"
+                    Height="32" Padding="14,0"
+                    VerticalAlignment="Center"
+                    Visibility="{Binding IsTestMode, Converter={StaticResource BoolToVisibility}}"/>
+
+            <Button Grid.Column="4"
                     Content="로그아웃"
                     Command="{Binding LogoutCommand}"
                     Style="{StaticResource ToolbarButton}"
                     Height="32" Padding="14,0"
                     VerticalAlignment="Center"/>
 
-            <TextBlock Grid.Column="4"
+            <TextBlock Grid.Column="6"
                        Text="{Binding CurrentDateText}"
                        FontSize="14" FontWeight="Bold"
                        Foreground="#333333"
@@ -196,6 +206,9 @@
                                   CellStyle="{StaticResource FluentDataGridCell}"
                                   SelectionChanged="LotDataGrid_SelectionChanged"
                                   BorderThickness="0">
+                            <DataGrid.CommandBindings>
+                                <CommandBinding Command="Copy" Executed="DataGrid_CopyCell"/>
+                            </DataGrid.CommandBindings>
                             <DataGrid.Columns>
 
                                 <!-- 체크박스 -->

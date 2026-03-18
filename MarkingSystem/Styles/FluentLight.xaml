@@ -2,6 +2,11 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ═══════════════════════════════════════════════════════
+         CONVERTERS
+    ═══════════════════════════════════════════════════════ -->
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+    <!-- ═══════════════════════════════════════════════════════
          FONTS
     ═══════════════════════════════════════════════════════ -->
     <FontFamily x:Key="AppFont">pack://application:,,,/MarkingSystem;component/Fonts/#NanumSquare, 맑은 고딕, Malgun Gothic</FontFamily>
@@ -404,7 +409,7 @@
         <Setter Property="Padding"                    Value="12,0"/>
         <Setter Property="BorderBrush"                Value="{StaticResource DividerBrush}"/>
         <Setter Property="BorderThickness"            Value="0,0,0,1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="SeparatorBrush"             Value="{StaticResource DividerBrush}"/>
         <Setter Property="SeparatorVisibility"        Value="Collapsed"/>
     </Style>

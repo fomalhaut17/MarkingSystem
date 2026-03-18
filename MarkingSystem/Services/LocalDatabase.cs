@@ -117,27 +117,37 @@ public sealed class LocalDatabase
 
     /// <summary>
     /// 미저장(is_result_saved=0) 발행 결과가 하나라도 존재하면 true.
+    /// materialBarcode를 지정하면 해당 물류 바코드로 범위를 한정.
     /// </summary>
-    public bool HasUnsavedResults()
+    public bool HasUnsavedResults(string? materialBarcode = null)
     {
         using var conn = OpenConnection();
         using var cmd  = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM issue_log WHERE is_result_saved = 0";
+        if (materialBarcode == null)
+        {
+            cmd.CommandText = "SELECT COUNT(*) FROM issue_log WHERE is_result_saved = 0";
+        }
+        else
+        {
+            cmd.CommandText = "SELECT COUNT(*) FROM issue_log WHERE is_result_saved = 0 AND material_barcode = $mb";
+            cmd.Parameters.AddWithValue("$mb", materialBarcode);
+        }
         return (long)(cmd.ExecuteScalar() ?? 0L) > 0;
     }
 
     /// <summary>
-    /// 특정 물류 바코드의 미저장 발행 결과를 반환.
-    /// 반환: lot_ser → InspectionResult 매핑. 없으면 빈 딕셔너리.
+    /// 특정 물류 바코드의 모든 발행 이력을 반환 (저장 여부 무관).
+    /// 반환: lot_barcode (lot_code+lot_ser) → InspectionResult 매핑. 없으면 빈 딕셔너리.
     /// </summary>
-    public Dictionary<string, InspectionResult> GetIssueResultsByMaterial(string materialBarcode)
+    public Dictionary<string, InspectionResult> GetLotEntriesByMaterial(string materialBarcode)
     {
         using var conn = OpenConnection();
         using var cmd  = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT lot_ser, inspection_result
+            SELECT lot_code || lot_ser, inspection_result
               FROM issue_log
              WHERE material_barcode = $mb
+             ORDER BY lot_ser
             """;
         cmd.Parameters.AddWithValue("$mb", materialBarcode);
 
@@ -145,9 +155,9 @@ public sealed class LocalDatabase
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            var ser = reader.GetString(0);
+            var lotBarcode = reader.GetString(0);
             if (Enum.TryParse<InspectionResult>(reader.GetString(1), out var r))
-                result[ser] = r;
+                result[lotBarcode] = r;
         }
         return result;
     }
@@ -163,6 +173,18 @@ public sealed class LocalDatabase
         cmd.CommandText = "SELECT MAX(lot_ser) FROM issue_log WHERE lot_code = $lc";
         cmd.Parameters.AddWithValue("$lc", lotCode);
         return cmd.ExecuteScalar() as string ?? "000000";
+    }
+
+    // ── 테스트 유틸 ───────────────────────────────────────────────────────────
+
+    /// <summary>테스트 초기화: 지정 물류 바코드의 issue_log 삭제.</summary>
+    public void ResetForTest(string materialBarcode)
+    {
+        using var conn = OpenConnection();
+        using var cmd  = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM issue_log WHERE material_barcode = $mb";
+        cmd.Parameters.AddWithValue("$mb", materialBarcode);
+        cmd.ExecuteNonQuery();
     }
 
     // ── 내부 유틸 ─────────────────────────────────────────────────────────────

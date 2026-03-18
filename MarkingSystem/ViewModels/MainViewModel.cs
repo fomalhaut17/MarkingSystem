@@ -41,15 +41,17 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
         _api             = new WizMesApiClient(settings.Api.BaseUrl, auth);
         _plc             = PlcClientFactory.Create(settings.Plc);
         _markingSettings = settings.Marking;
+        IsTestMode       = settings.AppMode is "local" or "dev";
         LotEntries = [];
 
-        StartPublishCommand = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready || State == SystemState.ResultReady);
-        StopPublishCommand  = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating && !_isStoppingInProgress);
-        MarkDefectCommand   = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
-        SaveResultCommand   = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
-        SelectAllCommand    = new RelayCommand(ExecuteSelectAll);
-        DeselectAllCommand  = new RelayCommand(ExecuteDeselectAll);
-        LogoutCommand       = new RelayCommand(ExecuteLogout);
+        StartPublishCommand    = new RelayCommand(ExecuteStartPublish, () => State == SystemState.Ready || State == SystemState.ResultReady);
+        StopPublishCommand     = new RelayCommand(ExecuteStopPublish,  () => State == SystemState.Operating && !_isStoppingInProgress);
+        MarkDefectCommand      = new RelayCommand(ExecuteMarkDefect,   () => State == SystemState.ResultReady);
+        SaveResultCommand      = new RelayCommand(ExecuteSaveResult,   () => State == SystemState.ResultReady);
+        SelectAllCommand       = new RelayCommand(ExecuteSelectAll);
+        DeselectAllCommand     = new RelayCommand(ExecuteDeselectAll);
+        LogoutCommand          = new RelayCommand(ExecuteLogout);
+        ResetTestDataCommand   = new RelayCommand(ExecuteResetTestData, () => IsTestMode && CurrentMaterial != null && State != SystemState.Operating);
 
         UpdateDateTime();
         _clockTimer = new Timer(_ => UpdateDateTime(), null, 1000, 1000);
@@ -100,7 +102,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     public MaterialInfo? CurrentMaterial
     {
         get => _currentMaterial;
-        set { SetProperty(ref _currentMaterial, value); }
+        set { SetProperty(ref _currentMaterial, value); RelayCommand.Invalidate(); }
     }
 
     public string CurrentDateText
@@ -124,13 +126,15 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     // ── Commands ─────────────────────────────────────────────────────────────
 
-    public ICommand StartPublishCommand { get; }
-    public ICommand StopPublishCommand  { get; }
-    public ICommand MarkDefectCommand   { get; }
-    public ICommand SaveResultCommand   { get; }
-    public ICommand SelectAllCommand    { get; }
-    public ICommand DeselectAllCommand  { get; }
-    public ICommand LogoutCommand       { get; }
+    public bool     IsTestMode           { get; }
+    public ICommand StartPublishCommand  { get; }
+    public ICommand StopPublishCommand   { get; }
+    public ICommand MarkDefectCommand    { get; }
+    public ICommand SaveResultCommand    { get; }
+    public ICommand SelectAllCommand     { get; }
+    public ICommand DeselectAllCommand   { get; }
+    public ICommand LogoutCommand        { get; }
+    public ICommand ResetTestDataCommand { get; }
 
     // ── Events ───────────────────────────────────────────────────────────────
 
@@ -153,7 +157,7 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
         var barcode = MaterialBarcodeInput.Trim();
 
-        if (CurrentMaterial != null && _db.HasUnsavedResults())
+        if (CurrentMaterial != null && _db.HasUnsavedResults(CurrentMaterial.MaterialBarcode))
         {
             ShowErrorRequested?.Invoke(this,
                 "미저장 발행 결과가 있습니다.\n결과를 저장한 후 다음 물류 바코드를 조회하세요.");
@@ -182,18 +186,49 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
 
     private void ApplyMaterial(string barcode, MaterialInfo material)
     {
+        material.MaterialBarcode = barcode;
+        material.WorkDateTime    = DateTime.Now;
+
+        // 발행 이력이 있으면 기존 항목 복원 (저장 여부 무관, 중복 발행 방지)
+        var existing = _db.GetLotEntriesByMaterial(barcode);
+        if (existing.Count > 0)
+        {
+            LotEntries.Clear();
+            int seq = 1;
+            foreach (var kv in existing)
+            {
+                LotEntries.Add(new LotEntry
+                {
+                    Sequence        = seq++,
+                    MaterialBarcode = barcode,
+                    LotBarcode      = kv.Key,
+                    Result          = kv.Value,
+                });
+            }
+            material.LastIssuedSer = LotEntries[^1].LotSer;
+            CurrentMaterial        = material;
+            RefreshCounts();
+
+            bool hasUnsaved = _db.HasUnsavedResults(barcode);
+            // 미저장 항목이 있으면 결과 저장 가능 상태, 전부 저장됐으면 재발행 불가
+            State         = hasUnsaved ? SystemState.ResultReady : SystemState.Idle;
+            StatusMessage = hasUnsaved
+                ? $"발행 이력 복원: {barcode}  ({existing.Count}개, 저장 필요)"
+                : $"이미 처리가 완료된 물류 바코드입니다.  ({barcode})";
+            return;
+        }
+
         // 로컬 DB와 API 최종발행 Ser 중 큰 값 사용
         var localSer = _db.GetLastIssuedSer(material.LotCode);
         var lastSer  = string.Compare(localSer, material.LastIssuedSer, StringComparison.Ordinal) >= 0
                        ? localSer : material.LastIssuedSer;
 
-        material.MaterialBarcode = barcode;
-        material.LastIssuedSer   = lastSer;
-        material.WorkDateTime    = DateTime.Now;
-        CurrentMaterial          = material;
+        material.LastIssuedSer = lastSer;
+        CurrentMaterial        = material;
 
-        // 전체 목록 구성: 000001 ~ containerQty (NotIssued)
+        // 전체 목록 구성: lastSer+1 ~ lastSer+containerQty (NotIssued)
         int totalCount = int.Parse(material.ContainerQty);
+        int lastSerInt = int.Parse(lastSer);
         LotEntries.Clear();
         for (int i = 1; i <= totalCount; i++)
         {
@@ -201,17 +236,9 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
             {
                 Sequence        = i,
                 MaterialBarcode = barcode,
-                LotBarcode      = material.LotCode + i.ToString("D6"),
+                LotBarcode      = material.LotCode + (lastSerInt + i).ToString("D6"),
                 Result          = InspectionResult.NotIssued,
             });
-        }
-
-        // DB 오버레이: 이전에 발행된 항목의 결과를 반영
-        var dbResults = _db.GetIssueResultsByMaterial(barcode);
-        foreach (var entry in LotEntries)
-        {
-            if (dbResults.TryGetValue(entry.LotSer, out var result))
-                entry.Result = result;
         }
 
         RefreshCounts();
@@ -467,6 +494,25 @@ public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         _auth.Logout();
         LogoutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async void ExecuteResetTestData()
+    {
+        if (CurrentMaterial == null) return;
+
+        var barcode = CurrentMaterial.MaterialBarcode;
+        var msg     = $"[{barcode}] 의 발행 이력을 삭제합니다.\n계속하시겠습니까?";
+        if (ConfirmRequested?.Invoke(msg, "테스트 초기화") != true) return;
+
+        await _api.ResetTestDataAsync(barcode);
+        _db.ResetForTest(barcode);
+
+        CurrentMaterial = null;
+        LotEntries.Clear();
+        MaterialBarcodeInput = string.Empty;
+        State         = SystemState.Idle;
+        IsOperating   = false;
+        StatusMessage = $"테스트 초기화 완료  ({barcode})";
     }
 
     public void RefreshCounts()

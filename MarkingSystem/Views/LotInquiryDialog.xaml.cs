@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace MarkingSystem.Views;
 
@@ -62,6 +63,43 @@ public partial class LotInquiryView : UserControl
         _    => InspectionResult.Pending,
     };
 
+    private void DataGrid_CopyCell(object sender, ExecutedRoutedEventArgs e)
+    {
+        var dg   = (DataGrid)sender;
+        var info = dg.CurrentCell;
+        if (info.Item == null || info.Column == null) { e.Handled = true; return; }
+
+        var text = GetCellText(info);
+        if (!string.IsNullOrEmpty(text))
+            Clipboard.SetText(text);
+        e.Handled = true;
+    }
+
+    private static string GetCellText(DataGridCellInfo info)
+    {
+        if (info.Column is DataGridTextColumn tc &&
+            tc.Binding is System.Windows.Data.Binding b)
+        {
+            var prop = info.Item.GetType().GetProperty(b.Path.Path);
+            return prop?.GetValue(info.Item)?.ToString() ?? string.Empty;
+        }
+
+        var content = info.Column.GetCellContent(info.Item);
+        return FindTextBlock(content)?.Text ?? string.Empty;
+    }
+
+    private static TextBlock? FindTextBlock(DependencyObject? parent)
+    {
+        if (parent == null) return null;
+        if (parent is TextBlock tb) return tb;
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var result = FindTextBlock(VisualTreeHelper.GetChild(parent, i));
+            if (result != null) return result;
+        }
+        return null;
+    }
+
     private void HeaderCheckBox_Click(object sender, RoutedEventArgs e)
     {
         var cb = (CheckBox)sender;
@@ -77,14 +115,12 @@ public partial class LotInquiryView : UserControl
 
         if (selected.Any(r => r.Result == InspectionResult.OK))
         {
-            MessageBox.Show("양품으로 판정된 항목이 포함되어 있습니다.\n계속하면 해당 항목도 불량 처리됩니다.",
-                            "경고", MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogWindow.ShowError(Window.GetWindow(this),
+                "양품으로 판정된 항목이 포함되어 있습니다.\n계속하면 해당 항목도 불량 처리됩니다.", "경고");
         }
 
-        var confirm = MessageBox.Show("선택된 항목을 불량(NG) 처리하시겠습니까?",
-                                      "불량 처리 확인",
-                                      MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (confirm != MessageBoxResult.Yes) return;
+        if (!DialogWindow.ShowConfirm(Window.GetWindow(this),
+                "선택된 항목을 불량(NG) 처리하시겠습니까?", "불량 처리 확인")) return;
 
         foreach (var entry in selected)
         {

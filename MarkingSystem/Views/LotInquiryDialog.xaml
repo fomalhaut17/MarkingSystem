@@ -43,6 +43,9 @@
                   CellStyle="{StaticResource FluentDataGridCell}"
                   BorderThickness="0"
                   Margin="16,12,16,0">
+            <DataGrid.CommandBindings>
+                <CommandBinding Command="Copy" Executed="DataGrid_CopyCell"/>
+            </DataGrid.CommandBindings>
             <DataGrid.Columns>
 
                 <!-- 체크박스 -->

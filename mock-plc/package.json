@@ -4,6 +4,10 @@
   "description": "LS XGT FENET Mock PLC Server for Manntek Marking System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:serial": "node serial-server.js"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0"
   }
 }
