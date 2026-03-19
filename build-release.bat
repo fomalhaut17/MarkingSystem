@@ -35,11 +35,28 @@ if errorlevel 1 (
 echo [3/4] Setting AppMode to %ENV%...
 powershell -Command "Set-Content -Path '%OUT%\appsettings.json' -Value '{\"AppMode\":\"%ENV%\"}' -Encoding UTF8"
 
-echo [4/4] Removing unused appsettings files...
+echo [4/5] Creating run.bat for dist...
+(
+    echo @echo off
+    echo start "" "MarkingSystem.Mock.exe"
+    echo timeout /t 3 /nobreak ^> nul
+    echo start "" "MarkingSystem.exe"
+) > %OUT%\run.bat
+
+echo [5/6] Removing unused appsettings files...
 for %%e in (local dev prod) do (
     if not "%%e"=="%ENV%" (
         if exist %OUT%\appsettings.%%e.json del /f /q %OUT%\appsettings.%%e.json
     )
+)
+
+echo [6/6] Creating ZIP archive...
+set ZIP=dist\MarkingSystem-%ENV%.zip
+if exist %ZIP% del /f /q %ZIP%
+powershell -Command "Compress-Archive -Path '%OUT%\*' -DestinationPath '%ZIP%'"
+if errorlevel 1 (
+    echo ZIP failed.
+    exit /b 1
 )
 
 echo.
@@ -49,6 +66,8 @@ echo   MarkingSystem.exe
 echo   MarkingSystem.Mock.exe
 echo   appsettings.json        AppMode: %ENV%
 echo   appsettings.%ENV%.json
+echo.
+echo ZIP archive: %ZIP%
 echo.
 if "%ENV%"=="local" (
     echo NOTE: Run MarkingSystem.Mock.exe first, then MarkingSystem.exe

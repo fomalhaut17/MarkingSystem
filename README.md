@@ -1,6 +1,29 @@
 # 만텍 각인 시스템 — 개발/테스트 실행 가이드
 
-## 사전 조건
+---
+
+## 빌드 파일 수령 시 (소스 빌드 불필요)
+
+ZIP 파일을 전달받은 경우 아래 절차만 따르면 됩니다.
+
+### local 모드
+
+1. ZIP 압축 해제
+2. `run.bat` 실행
+
+### dev 모드 (Serial PLC 경로 검증)
+
+1. [com0com](https://sourceforge.net/projects/com0com/) 설치 → 가상 포트 쌍 **COM5 ↔ COM6** 생성
+2. ZIP 압축 해제
+3. `run.bat` 실행
+
+> 로그인 정보 및 테스트용 물류 바코드는 아래 **로그인 정보 / 테스트용 물류 바코드** 항목을 참고하세요.
+
+---
+
+## 소스에서 직접 빌드하여 실행
+
+### 사전 조건
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 설치
 
