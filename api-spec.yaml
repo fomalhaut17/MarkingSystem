@@ -1,0 +1,702 @@
+openapi: 3.0.3
+info:
+  title: 만텍 각인 시스템 API
+  description: |
+    LS XBC-DN64H PLC 기반 Lot 각인 시스템의 wizMES 연동 API 명세.
+
+    ## 인증
+    로그인 후 발급된 `accessToken`을 모든 `/api/` 요청의 헤더에 전달.
+    ```
+    Authorization: Bearer {accessToken}
+    ```
+    토큰 만료 시 `/auth/refresh`로 갱신. Refresh Token은 1회 사용 후 무효화(rotation).
+
+    ## 공통 응답 구조
+    모든 응답은 아래 Envelope를 따름.
+    ```json
+    {
+      "success": true | false,
+      "data":  { ... } | null,
+      "error": null   | { "code": "ERROR_CODE", "message": "설명" }
+    }
+    ```
+    성공 시 `error: null`, 실패 시 `data: null`.
+
+    ## Mock 서버
+    - 기본 포트: `http://localhost:47300`
+    - 포트 변경: `appsettings.{env}.json` → `Mock.Api.Port`
+    - 테스트 초기화: `DELETE /api/marking/test/reset` (운영 환경 미제공)
+  version: "0.3.0"
+
+servers:
+  - url: http://localhost:47300
+    description: 개발/테스트 Mock 서버
+
+security:
+  - bearerAuth: []
+
+# ── 공통 정의 ──────────────────────────────────────────────────────────────────
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: POST /auth/login 에서 발급된 accessToken
+
+  schemas:
+
+    # ── Envelope ────────────────────────────────────────────────────────────────
+
+    ErrorBody:
+      type: object
+      properties:
+        code:
+          type: string
+          description: 에러 코드 (영문 대문자 스네이크 케이스)
+          example: INVALID_REQUEST
+        message:
+          type: string
+          description: 에러 설명 (한국어)
+          example: companyCode, username, password 가 필요합니다.
+
+    # ── 인증 ────────────────────────────────────────────────────────────────────
+
+    LoginRequest:
+      type: object
+      required: [companyCode, username, password]
+      properties:
+        companyCode:
+          type: string
+          description: 업체 코드
+          example: MANNTEK
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: "1234"
+
+    TokenData:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: API 인증에 사용하는 Access Token
+          example: mock-access-a1b2c3d4e5f6
+        refreshToken:
+          type: string
+          description: 갱신에 사용하는 Refresh Token (1회용)
+          example: mock-refresh-a1b2c3d4e5f6
+        expiresIn:
+          type: integer
+          description: Access Token 유효 시간 (초)
+          example: 3600
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: 이전 로그인/갱신에서 발급된 Refresh Token
+
+    # ── 물류 바코드 조회 ────────────────────────────────────────────────────────
+
+    MaterialData:
+      type: object
+      properties:
+        materialBarcode:
+          type: string
+          description: 물류 바코드 (조회에 사용한 값)
+          example: "12345678901234"
+        productName:
+          type: string
+          description: 품명
+          example: 플라스틱 커버 어셈블리
+        manufactureDate:
+          type: string
+          format: date
+          description: 제조일자
+          example: "2026-03-14"
+        containerQty:
+          type: string
+          description: 용기 내 수량 (해당 물류 바코드 용기에 담긴 개수)
+          example: "10"
+        lotCode:
+          type: string
+          description: |
+            Lot 코드. 형식: `{품번}:{BuildSite}{년도2}{J-Date3}`
+            예) 품번 P2063121-B1-A, 사이트 SHV, 2026년, 073번째 날
+          example: P2063121-B1-A:SHVB26073
+        lastIssuedSer:
+          type: string
+          description: |
+            동일 Lot의 최종 발행 시리얼 번호 (6자리, 0 패딩).
+            발행 이력이 없으면 "000000". 앱에서 다음 Ser 시작 번호 계산에 사용.
+          example: "000010"
+        productionEquipment:
+          type: string
+          description: 생산 설비명
+          example: 사출기-01
+        productionMold:
+          type: string
+          description: 생산 금형명
+          example: 금형-A
+        lotProductionQty:
+          type: string
+          description: Lot 총 생산 수량
+          example: "500"
+
+    # ── 발행 결과 저장 ───────────────────────────────────────────────────────────
+
+    IssueResultItem:
+      type: object
+      required: [lotBarcode, inspectionResult]
+      properties:
+        lotBarcode:
+          type: string
+          description: |
+            Lot 바코드 (29자). Lot 코드(23자) + Ser(6자, 000001~999999).
+            예) `P2063121-B1-A:SHVB26073` + `000001`
+          example: P2063121-B1-A:SHVB26073000001
+        inspectionResult:
+          type: string
+          enum: [OK, NG, AD]
+          description: |
+            검사 결과.
+            - `OK`: 양품 (레이저 스캔 결과 일치)
+            - `AD`: 외관불량 (레이저 스캔 결과 불일치, Appearance Defect)
+            - `NG`: 불량 (작업자 수동 지정)
+          example: OK
+
+    IssueResultsRequest:
+      type: object
+      required: [materialBarcode, results]
+      properties:
+        materialBarcode:
+          type: string
+          description: 물류 바코드
+          example: "12345678901234"
+        results:
+          type: array
+          description: 발행된 Lot 바코드 및 검사 결과 목록
+          items:
+            $ref: '#/components/schemas/IssueResultItem'
+
+    # ── 발행 이력 조회 ───────────────────────────────────────────────────────────
+
+    LotItem:
+      type: object
+      properties:
+        materialBarcode:
+          type: string
+          example: "12345678901234"
+        lotBarcode:
+          type: string
+          example: P2063121-B1-A:SHVB26073000001
+        inspectionResult:
+          type: string
+          enum: [OK, NG, AD]
+          example: OK
+
+    # ── 생산 Lot 조회 ────────────────────────────────────────────────────────────
+
+    InjectionConditionCell:
+      type: object
+      description: 사출 조건 설정값 / 실제값 쌍
+      properties:
+        set:
+          type: string
+          description: 설정값
+          example: "220"
+        act:
+          type: string
+          description: 실제값 (Actual)
+          example: "219"
+
+    InjectionConditionRow:
+      type: object
+      description: 사출 조건 한 행 (5개 구간 H1~H5)
+      properties:
+        groupName:
+          type: string
+          description: 조건 그룹명
+          example: 성형조건1차
+        rowName:
+          type: string
+          description: 조건 항목명
+          example: 온도(°C)
+        h1:
+          $ref: '#/components/schemas/InjectionConditionCell'
+        h2:
+          $ref: '#/components/schemas/InjectionConditionCell'
+        h3:
+          $ref: '#/components/schemas/InjectionConditionCell'
+        h4:
+          $ref: '#/components/schemas/InjectionConditionCell'
+        h5:
+          $ref: '#/components/schemas/InjectionConditionCell'
+
+    ProductionLotData:
+      type: object
+      properties:
+        lotCode:
+          type: string
+          example: P2063121-B1-A:SHVB26073
+        productName:
+          type: string
+          example: 플라스틱 커버 어셈블리
+        manufactureDate:
+          type: string
+          format: date
+          example: "2026-03-14"
+        productionEquipment:
+          type: string
+          example: 사출기-01
+        productionMold:
+          type: string
+          example: 금형-A
+        lotProductionQty:
+          type: string
+          example: "500"
+        okCount:
+          type: integer
+          description: 현재까지 저장된 OK 건수
+          example: 8
+        ngCount:
+          type: integer
+          description: 현재까지 저장된 NG 건수
+          example: 2
+        injectionConditions:
+          type: array
+          description: 사출 조건 목록
+          items:
+            $ref: '#/components/schemas/InjectionConditionRow'
+
+# ── 엔드포인트 ─────────────────────────────────────────────────────────────────
+
+paths:
+
+  # ── 인증 ──────────────────────────────────────────────────────────────────────
+
+  /auth/login:
+    post:
+      tags: [인증]
+      summary: 로그인
+      description: 업체코드·아이디·비밀번호로 인증 후 Access Token / Refresh Token 발급.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/TokenData'
+                  error:
+                    nullable: true
+                    example: null
+              example:
+                success: true
+                data:
+                  accessToken: mock-access-a1b2c3d4e5f6
+                  refreshToken: mock-refresh-a1b2c3d4e5f6
+                  expiresIn: 3600
+                error: null
+        '400':
+          description: 필수 파라미터 누락
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  data:
+                    nullable: true
+                    example: null
+                  error:
+                    $ref: '#/components/schemas/ErrorBody'
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: companyCode, username, password 가 필요합니다.
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: 업체코드·아이디·비밀번호가 올바르지 않습니다.
+
+  /auth/refresh:
+    post:
+      tags: [인증]
+      summary: 토큰 갱신
+      description: |
+        Refresh Token으로 새 Access Token / Refresh Token 발급.
+        요청에 사용한 Refresh Token은 즉시 무효화됨 (Token Rotation).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: 갱신 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  accessToken: mock-access-newtoken123
+                  refreshToken: mock-refresh-newtoken123
+                  expiresIn: 3600
+                error: null
+        '400':
+          description: refreshToken 누락
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: refreshToken 이 필요합니다.
+        '401':
+          description: Refresh Token 만료 또는 유효하지 않음
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REFRESH_TOKEN
+                  message: Refresh Token 이 만료되었거나 유효하지 않습니다.
+
+  # ── 각인 API ──────────────────────────────────────────────────────────────────
+
+  /api/marking/materials/{materialBarcode}:
+    get:
+      tags: [각인]
+      summary: 물류 바코드 조회
+      description: |
+        물류 바코드로 연결된 Lot·품목 정보와 최종 발행 시리얼을 조회.
+
+        **`lastIssuedSer` 계산 규칙**
+        - 동일 Lot 코드에 속한 모든 물류 바코드의 발행 이력에서 Lot 바코드 마지막 6자리(Ser) 중 최대값
+        - 이력이 없으면 `"000000"` 반환
+        - 앱은 이 값 + 1 부터 새 Ser를 채번함
+      parameters:
+        - name: materialBarcode
+          in: path
+          required: true
+          description: 물류 바코드 (작업자가 스캔하는 1D 바코드)
+          schema:
+            type: string
+          example: "12345678901234"
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/MaterialData'
+                  error:
+                    nullable: true
+                    example: null
+              example:
+                success: true
+                data:
+                  materialBarcode: "12345678901234"
+                  productName: 플라스틱 커버 어셈블리
+                  manufactureDate: "2026-03-14"
+                  containerQty: "10"
+                  lotCode: P2063121-B1-A:SHVB26073
+                  lastIssuedSer: "000000"
+                  productionEquipment: 사출기-01
+                  productionMold: 금형-A
+                  lotProductionQty: "500"
+                error: null
+        '401':
+          description: 인증 토큰 없음 또는 만료
+        '404':
+          description: Lot 또는 품목 정보 없음
+          content:
+            application/json:
+              examples:
+                lotNotFound:
+                  summary: Lot 없음
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: LOT_NOT_FOUND
+                      message: 연결된 Lot 정보를 찾을 수 없습니다.
+                productNotFound:
+                  summary: 품목 없음
+                  value:
+                    success: false
+                    data: null
+                    error:
+                      code: PRODUCT_NOT_FOUND
+                      message: 연결된 품목 정보를 찾을 수 없습니다.
+
+  /api/marking/issue-results:
+    post:
+      tags: [각인]
+      summary: 발행 결과 저장
+      description: |
+        각인 완료 후 발행된 Lot 바코드 목록과 검사 결과를 저장.
+
+        **inspectionResult 값**
+        | 값 | 의미 |
+        |----|------|
+        | `OK` | 양품 — 레이저 마킹 후 스캔 결과가 전송한 Lot 바코드와 일치 |
+        | `AD` | 외관불량 (Appearance Defect) — 스캔 결과 불일치 |
+        | `NG` | 불량 — 작업자가 수동으로 불량 지정한 항목 |
+
+        한 물류 바코드의 전체 발행 결과를 한 번에 전송하는 것을 권장.
+        부분 저장도 허용되며, 중복 저장 시 별도 레코드로 추가됨.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueResultsRequest'
+            example:
+              materialBarcode: "12345678901234"
+              results:
+                - lotBarcode: P2063121-B1-A:SHVB26073000001
+                  inspectionResult: OK
+                - lotBarcode: P2063121-B1-A:SHVB26073000002
+                  inspectionResult: OK
+                - lotBarcode: P2063121-B1-A:SHVB26073000003
+                  inspectionResult: AD
+                - lotBarcode: P2063121-B1-A:SHVB26073000004
+                  inspectionResult: NG
+      responses:
+        '200':
+          description: 저장 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  savedCount: 4
+                error: null
+        '400':
+          description: 필수 파라미터 누락
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: INVALID_REQUEST
+                  message: materialBarcode 와 results 배열이 필요합니다.
+        '401':
+          description: 인증 토큰 없음 또는 만료
+
+  /api/marking/lots:
+    get:
+      tags: [각인]
+      summary: 발행 이력 조회
+      description: |
+        물류 바코드 또는 Lot 코드로 저장된 발행 이력을 조회.
+        `materialBarcode`와 `lotCode` 중 하나는 반드시 전달해야 함.
+
+        **용도**
+        - 앱 재시작 시 이전 발행 이력 복원 (`materialBarcode`로 조회)
+        - 동일 Lot의 타 물류 바코드 이력 확인 (`lotCode`로 조회)
+      parameters:
+        - name: materialBarcode
+          in: query
+          description: 물류 바코드로 이력 조회
+          schema:
+            type: string
+          example: "12345678901234"
+        - name: lotCode
+          in: query
+          description: Lot 코드로 조회 (해당 Lot에 속한 전체 물류 바코드의 이력)
+          schema:
+            type: string
+          example: P2063121-B1-A:SHVB26073
+      responses:
+        '200':
+          description: 조회 성공 (이력 없으면 빈 배열)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LotItem'
+                      totalCount:
+                        type: integer
+                        description: 전체 건수
+                  error:
+                    nullable: true
+                    example: null
+              example:
+                success: true
+                data:
+                  items:
+                    - materialBarcode: "12345678901234"
+                      lotBarcode: P2063121-B1-A:SHVB26073000001
+                      inspectionResult: OK
+                    - materialBarcode: "12345678901234"
+                      lotBarcode: P2063121-B1-A:SHVB26073000002
+                      inspectionResult: AD
+                  totalCount: 2
+                error: null
+        '400':
+          description: 쿼리 파라미터 누락
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: MISSING_QUERY_PARAM
+                  message: materialBarcode 또는 lotCode 파라미터가 필요합니다.
+        '401':
+          description: 인증 토큰 없음 또는 만료
+
+  /api/marking/production-lots/{lotCode}:
+    get:
+      tags: [각인]
+      summary: 생산 Lot 조회
+      description: |
+        Lot 코드로 생산 Lot 상세 정보, OK/NG 집계, 사출 조건 목록을 조회.
+        `lotCode`는 경로에 포함되며, `:` 문자가 포함되므로 URL 인코딩 필요 (`%3A`).
+      parameters:
+        - name: lotCode
+          in: path
+          required: true
+          description: Lot 코드 (URL 인코딩 필요)
+          schema:
+            type: string
+          example: P2063121-B1-A%3ASHVB26073
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProductionLotData'
+                  error:
+                    nullable: true
+                    example: null
+              example:
+                success: true
+                data:
+                  lotCode: P2063121-B1-A:SHVB26073
+                  productName: 플라스틱 커버 어셈블리
+                  manufactureDate: "2026-03-14"
+                  productionEquipment: 사출기-01
+                  productionMold: 금형-A
+                  lotProductionQty: "500"
+                  okCount: 8
+                  ngCount: 2
+                  injectionConditions:
+                    - groupName: 성형조건1차
+                      rowName: 온도(°C)
+                      h1: { set: "220", act: "219" }
+                      h2: { set: "225", act: "224" }
+                      h3: { set: "230", act: "229" }
+                      h4: { set: "220", act: "220" }
+                      h5: { set: "215", act: "214" }
+                    - groupName: 성형조건1차
+                      rowName: 압력(Kg/cm2)
+                      h1: { set: "120", act: "118" }
+                      h2: { set: "130", act: "129" }
+                      h3: { set: "125", act: "124" }
+                      h4: { set: "115", act: "115" }
+                      h5: { set: "110", act: "109" }
+                error: null
+        '401':
+          description: 인증 토큰 없음 또는 만료
+        '404':
+          description: Lot 없음
+          content:
+            application/json:
+              example:
+                success: false
+                data: null
+                error:
+                  code: LOT_NOT_FOUND
+                  message: 해당 Lot 코드를 찾을 수 없습니다.
+
+  # ── 테스트 전용 ────────────────────────────────────────────────────────────────
+
+  /api/marking/test/reset:
+    delete:
+      tags: [테스트]
+      summary: 테스트 데이터 초기화
+      description: |
+        발행 이력(`issue_results`) 전체 삭제. **테스트 전용.**
+
+        > ⚠️ 운영 환경(wizMES 실 서버)에서는 이 엔드포인트를 제공하지 않아야 함.
+      security: []
+      responses:
+        '200':
+          description: 초기화 성공
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  clearedCount: 15
+                error: null
+
+# ── 태그 순서 ──────────────────────────────────────────────────────────────────
+
+tags:
+  - name: 인증
+    description: 로그인 및 토큰 관리 (`/auth/`)
+  - name: 각인
+    description: 물류 바코드 조회, 발행 결과 저장, 이력 조회 (`/api/marking/`)
+  - name: 테스트
+    description: Mock 서버 전용 — 운영 환경 미제공

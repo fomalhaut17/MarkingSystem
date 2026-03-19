@@ -23,7 +23,10 @@
       "Bash(dotnet publish:*)",
       "Bash(powershell -Command \"Set-Content -Path ''C:/Users/wonseok/playground/marking-system/dist/local/appsettings.json'' -Value ''{\"\"AppMode\"\":\"\"local\"\"}'' -Encoding UTF8\")",
       "Bash(wc:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(where pdftotext:*)",
+      "Bash(where mutool:*)",
+      "Bash(pdftotext:*)"
     ]
   }
 }
