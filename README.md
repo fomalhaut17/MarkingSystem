@@ -37,7 +37,7 @@ ZIP 파일을 전달받은 경우 아래 절차만 따르면 됩니다.
 run-local.bat
 ```
 
-Mock 서버(HTTP :3000 + TCP :2004)와 앱이 순서대로 실행됩니다.
+Mock 서버(HTTP :47300 + TCP :47200)와 앱이 순서대로 실행됩니다.
 Mock 서버 창이 먼저 열리고, 3초 후 앱 창이 열립니다.
 
 ### 방법 B — Visual Studio
@@ -112,6 +112,7 @@ local 모드로 돌아올 때는 두 파일 모두 `"AppMode": "local"`로 되�
 |---|---|
 | 앱 실행 직후 API 오류 | Mock 서버가 아직 기동 중. 잠시 후 재시도 |
 | PLC 연결 실패 | Mock 서버 창이 닫혀 있음. bat 파일 재실행 또는 F5 재시작 |
-| 포트 이미 사용 중 | bat 파일이 자동 처리하지만 실패 시 작업 관리자에서 `MarkingSystem.Mock` 수동 종료 후 재실행 |
+| 포트 이미 사용 중 (프로세스 충돌) | bat 파일이 자동 처리하지만 실패 시 작업 관리자에서 `MarkingSystem.Mock` 수동 종료 후 재실행 |
+| 포트 이미 사용 중 (다른 프로그램 점유) | `MarkingSystem.Mock/appsettings.{mode}.json`에서 `Mock.Api.Port`(기본 47300) 또는 `Plc.Tcp.Port`(기본 47200) 변경. API 포트 변경 시 `MarkingSystem/appsettings.{mode}.json`의 `Api.BaseUrl` 포트도 함께 수정 후 빌드 |
 | `dotnet` 명령어를 찾을 수 없음 | .NET 8 SDK 설치 여부 확인 (`dotnet --version`) |
 | dev 모드인데 Mock이 local로 뜸 | `MarkingSystem.Mock/appsettings.json` 변경 후 빌드했는지 확인 |

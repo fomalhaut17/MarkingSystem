@@ -40,8 +40,9 @@ if (modeSelectorPath is not null)
     catch { }
 }
 
+var apiPort    = 47300;
 var plcMode    = "Tcp";
-var tcpPort    = 2004;
+var tcpPort    = 47200;
 var serialPort = "COM6";   // com0com 기본 mock 포트 (앱=COM5, mock=COM6)
 var baudRate   = 9600;
 var stationNo  = "01";
@@ -52,6 +53,15 @@ if (modePath is not null)
     try
     {
         var doc = JsonDocument.Parse(File.ReadAllText(modePath));
+
+        // Mock 섹션: API 포트, Serial COM 포트
+        if (doc.RootElement.TryGetProperty("Mock", out var mock))
+        {
+            if (mock.TryGetProperty("Api", out var api) &&
+                api.TryGetProperty("Port", out var ap)) apiPort = ap.GetInt32();
+            if (mock.TryGetProperty("Serial", out var ms) &&
+                ms.TryGetProperty("PortName", out var pn)) serialPort = pn.GetString() ?? serialPort;
+        }
 
         // Plc 섹션: mode, TCP port, serial baud/station
         if (doc.RootElement.TryGetProperty("Plc", out var plc))
@@ -66,26 +76,18 @@ if (modePath is not null)
                 if (serial.TryGetProperty("StationNo", out var sn)) stationNo = sn.GetString() ?? stationNo;
             }
         }
-
-        // Mock.Serial.PortName: mock이 열 COM 포트 (앱과 다른 쪽 가상 포트)
-        if (doc.RootElement.TryGetProperty("Mock", out var mock) &&
-            mock.TryGetProperty("Serial", out var ms) &&
-            ms.TryGetProperty("PortName", out var pn))
-        {
-            serialPort = pn.GetString() ?? serialPort;
-        }
     }
     catch { }
 }
 
-Console.WriteLine($"[MOCK] AppMode={mode}, Plc.Mode={plcMode}");
+Console.WriteLine($"[MOCK] AppMode={mode}, Plc.Mode={plcMode}, Api.Port={apiPort}");
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-var apiServer = new MockApiServer(port: 3000);
+var apiServer = new MockApiServer(port: apiPort);
 
 try
 {
@@ -109,5 +111,16 @@ try
     }
 }
 catch (OperationCanceledException) { }
+catch (Exception ex)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine();
+    Console.WriteLine($"[ERROR] {ex.Message}");
+    Console.ResetColor();
+    Console.WriteLine();
+    Console.WriteLine("Press any key to exit...");
+    Console.ReadKey(intercept: true);
+    return;
+}
 
 Console.WriteLine("[MOCK] Servers stopped.");

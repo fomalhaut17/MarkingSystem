@@ -13,7 +13,7 @@ LS XBC-DN64H PLC와 통신하여 Lot 바코드를 각인하는 WPF 데스크탑 
 ```
 run-dev.bat
 ```
-- Mock API 서버 (HTTP :3000) + Mock PLC 서버 (TCP :2004) 를 먼저 띄운 뒤 앱 실행
+- Mock API 서버 (HTTP :47300) + Mock PLC 서버 (TCP :47200) 를 먼저 띄운 뒤 앱 실행
 - Mock API: `mock-api/server.js` (json-server)
 - Mock PLC: `mock-plc/server.js` (Node.js TCP, 의존성 없음)
 

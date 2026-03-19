@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace MarkingSystem.Mock;
 
 /// <summary>
-/// LS XGT FENET Mock PLC 서버 (TCP :2004).
+/// LS XGT FENET Mock PLC 서버 (TCP :47200).
 /// [MOCK] 실제 PLC가 아닙니다. 테스트 전용.
 /// </summary>
 public sealed class MockPlcServer

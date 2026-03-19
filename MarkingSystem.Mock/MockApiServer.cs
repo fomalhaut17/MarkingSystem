@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace MarkingSystem.Mock;
 
 /// <summary>
-/// wizMES API Mock 서버 (HTTP :3000).
+/// wizMES API Mock 서버 (HTTP :47300).
 /// [MOCK] 실제 서버가 아닙니다. 테스트 전용.
 /// </summary>
 public sealed class MockApiServer

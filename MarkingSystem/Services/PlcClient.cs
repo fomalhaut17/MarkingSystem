@@ -31,7 +31,7 @@ public sealed class XgtRawPlcClient : IPlcClient
     // ── 접속 ──────────────────────────────────────────────────────────────────
 
     public const string DefaultHost = "127.0.0.1";
-    public const int    DefaultPort = 2004;
+    public const int    DefaultPort = 47200;
 
     private readonly string        _host;
     private readonly int           _port;

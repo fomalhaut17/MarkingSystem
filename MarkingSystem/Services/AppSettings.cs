@@ -72,7 +72,7 @@ public sealed class PlcSettings
 public sealed class TcpPlcSettings
 {
     [JsonPropertyName("Host")] public string Host { get; init; } = "127.0.0.1";
-    [JsonPropertyName("Port")] public int    Port { get; init; } = 2004;
+    [JsonPropertyName("Port")] public int    Port { get; init; } = 47200;
 }
 
 public sealed class SerialPlcSettings
