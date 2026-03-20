@@ -37,9 +37,9 @@ function flushIssueResults() {
 }
 
 // ── 인증 Mock 상태 ────────────────────────────────────────────────────────────
-// 테스트 계정: companyCode=MANNTEK / admin / 1234
+// 테스트 계정: companyCode=MANTEC / admin / 1234
 const MOCK_USERS = [
-  { companyCode: 'MANNTEK', username: 'admin', password: '1234' },
+  { companyCode: 'MANTEC', username: 'admin', password: '1234' },
 ]
 
 const refreshTokenStore = new Set()
@@ -254,7 +254,7 @@ server.listen(PORT, () => {
   console.log('')
   console.log('  wizMES Mock API  ->  http://localhost:' + PORT)
   console.log('  [Auth]')
-  console.log('    POST   /auth/login              (MANNTEK / admin / 1234)')
+  console.log('    POST   /auth/login              (MANTEC / admin / 1234)')
   console.log('    POST   /auth/refresh')
   console.log('  [Marking]')
   console.log('    GET    /api/marking/materials/:materialBarcode  (* 미등록 바코드도 수용)')

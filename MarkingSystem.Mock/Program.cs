@@ -84,6 +84,8 @@ Console.WriteLine($"[MOCK] AppMode={mode}, Plc.Mode={plcMode}, Api.Port={apiPort
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+var apiOnly = args.Contains("--api-only");
+
 var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
@@ -91,7 +93,12 @@ var apiServer = new MockApiServer(port: apiPort);
 
 try
 {
-    if (string.Equals(plcMode, "Serial", StringComparison.OrdinalIgnoreCase))
+    if (apiOnly)
+    {
+        Console.WriteLine($"[MOCK] API only mode (PLC mock disabled)");
+        await apiServer.RunAsync(cts.Token);
+    }
+    else if (string.Equals(plcMode, "Serial", StringComparison.OrdinalIgnoreCase))
     {
         Console.WriteLine($"[MOCK] Serial PLC mock: {serialPort} @ {baudRate}bps, station={stationNo}");
         var serialServer = new MockCnetSerialServer(serialPort, baudRate, stationNo);

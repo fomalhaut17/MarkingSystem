@@ -30,11 +30,11 @@ public sealed class MockCnetSerialServer
 
     // ── 메모리 주소 (appsettings.json PlcMemorySettings 기본값과 일치) ──────────
 
-    private const int MwLotBarcode1    = 100;  // %MW100 ~ %MW114
-    private const int MwLotBarcode2    = 120;  // %MW120 ~ %MW134
-    private const int MwBarcodeRequest = 140;  // %MW140
-    private const int MwScanned1       = 150;  // %MW150 ~ %MW164
-    private const int MwScanned2       = 170;  // %MW170 ~ %MW184
+    private const int MwLotBarcode1    = 100;  // %DW100 ~ %DW114
+    private const int MwLotBarcode2    = 120;  // %DW120 ~ %DW134
+    private const int MwBarcodeRequest = 140;  // %DW140
+    private const int MwScanned1       = 150;  // %DW150 ~ %DW164
+    private const int MwScanned2       = 170;  // %DW170 ~ %DW184
     private const int LotWordCount     = 15;
 
     private readonly Dictionary<int, ushort>  _memory = [];
@@ -171,7 +171,7 @@ public sealed class MockCnetSerialServer
 
         var preview = Enumerable.Range(0, Math.Min(wordCount, 4))
             .Select(i => _memory.GetValueOrDefault(addr + i));
-        Console.WriteLine($"  [MOCK SERIAL] READ  %MW{addr}[{wordCount}] → [{string.Join(", ", preview)}{(wordCount > 4 ? "..." : "")}]");
+        Console.WriteLine($"  [MOCK SERIAL] READ  %DW{addr}[{wordCount}] → [{string.Join(", ", preview)}{(wordCount > 4 ? "..." : "")}]");
 
         return resp;
     }
@@ -200,11 +200,11 @@ public sealed class MockCnetSerialServer
         if (wordCount <= 4)
         {
             var vals = Enumerable.Range(0, wordCount).Select(i => _memory.GetValueOrDefault(addr + i));
-            Console.WriteLine($"  [MOCK SERIAL] WRITE %MW{addr}[{wordCount}] ← [{string.Join(", ", vals)}]");
+            Console.WriteLine($"  [MOCK SERIAL] WRITE %DW{addr}[{wordCount}] ← [{string.Join(", ", vals)}]");
         }
         else
         {
-            Console.WriteLine($"  [MOCK SERIAL] WRITE %MW{addr}[{wordCount}] ← \"{ReadBarcode(addr)}\"");
+            Console.WriteLine($"  [MOCK SERIAL] WRITE %DW{addr}[{wordCount}] ← \"{ReadBarcode(addr)}\"");
         }
 
         var body = $"{stn}{cmd}{typ}";
@@ -307,7 +307,7 @@ public sealed class MockCnetSerialServer
 
     private static int ParseAddr(string varName)
     {
-        var m = Regex.Match(varName, @"%MW(\d+)");
+        var m = Regex.Match(varName, @"%[MD]W(\d+)");
         return m.Success ? int.Parse(m.Groups[1].Value) : 0;
     }
 }

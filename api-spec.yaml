@@ -70,7 +70,7 @@ components:
         companyCode:
           type: string
           description: 업체 코드
-          example: MANNTEK
+          example: MANTEC
         username:
           type: string
           example: admin

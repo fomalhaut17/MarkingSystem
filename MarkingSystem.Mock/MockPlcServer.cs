@@ -15,11 +15,11 @@ public sealed class MockPlcServer
 
     // ── 메모리 주소 (appsettings.json PlcMemorySettings 기본값과 일치) ──────────
 
-    private const int MwLotBarcode1    = 100;  // %MW100 ~ %MW114  (PC → PLC)
-    private const int MwLotBarcode2    = 120;  // %MW120 ~ %MW134  (PC → PLC)
-    private const int MwBarcodeRequest = 140;  // %MW140            (PLC → PC)
-    private const int MwScanned1       = 150;  // %MW150 ~ %MW164  (Scanner → PLC → PC)
-    private const int MwScanned2       = 170;  // %MW170 ~ %MW184  (Scanner → PLC → PC)
+    private const int MwLotBarcode1    = 100;  // %DW100 ~ %DW114  (PC → PLC)
+    private const int MwLotBarcode2    = 120;  // %DW120 ~ %DW134  (PC → PLC)
+    private const int MwBarcodeRequest = 140;  // %DW140            (PLC → PC)
+    private const int MwScanned1       = 150;  // %DW150 ~ %DW164  (Scanner → PLC → PC)
+    private const int MwScanned2       = 170;  // %DW170 ~ %DW184  (Scanner → PLC → PC)
     private const int LotWordCount     = 15;
 
     // ── XGT FENET 프로토콜 상수 ────────────────────────────────────────────────
@@ -316,7 +316,7 @@ public sealed class MockPlcServer
 
     private static int ParseAddr(string varName)
     {
-        var m = Regex.Match(varName, @"%MW(\d+)");
+        var m = Regex.Match(varName, @"%[MD]W(\d+)");
         return m.Success ? int.Parse(m.Groups[1].Value) : 0;
     }
 
