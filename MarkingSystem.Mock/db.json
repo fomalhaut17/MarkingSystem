@@ -1,6 +1,6 @@
 {
   "mock_users": [
-    { "companyCode": "MANTEC", "username": "admin", "password": "1234" }
+    { "companyCode": "DEMO", "username": "admin", "password": "1234" }
   ],
   "mock_products": [
     { "productCode": "P2063121-B1-A", "productName": "플라스틱 커버 어셈블리" },

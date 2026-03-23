@@ -17,16 +17,15 @@ public partial class LoginWindow : Window
 
     private void RestoreFormAndFocus()
     {
-        if (!string.IsNullOrEmpty(_auth.SavedCompanyCode) || !string.IsNullOrEmpty(_auth.SavedUsername))
+        if (!string.IsNullOrEmpty(_auth.SavedUsername))
         {
-            TxtCompanyCode.Text    = _auth.SavedCompanyCode ?? string.Empty;
-            TxtUsername.Text       = _auth.SavedUsername    ?? string.Empty;
+            TxtUsername.Text        = _auth.SavedUsername;
             ChkRememberMe.IsChecked = true;
             PwdPassword.Focus();
         }
         else
         {
-            TxtCompanyCode.Focus();
+            TxtUsername.Focus();
         }
     }
 
@@ -40,13 +39,13 @@ public partial class LoginWindow : Window
 
     private async Task ExecuteLoginAsync()
     {
-        var companyCode = TxtCompanyCode.Text.Trim();
-        var username    = TxtUsername.Text.Trim();
-        var password    = PwdPassword.Password;
+        const string companyCode = "DEMO"; // 임시 고정, 차후 재사용 예정
+        var username = TxtUsername.Text.Trim();
+        var password = PwdPassword.Password;
 
-        if (string.IsNullOrEmpty(companyCode) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
-            ShowError("업체코드, 아이디, 비밀번호를 모두 입력하세요.");
+            ShowError("아이디, 비밀번호를 모두 입력하세요.");
             return;
         }
 
