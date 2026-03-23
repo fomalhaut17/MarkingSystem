@@ -364,3 +364,5 @@ FodyWeavers.xsd
 
 # Release build output
 dist/
+# API test secrets
+secrets.json

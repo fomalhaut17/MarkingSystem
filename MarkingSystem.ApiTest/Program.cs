@@ -2,10 +2,19 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-var baseUrl      = "https://wizmes.com";
-var loginId      = "";
-var loginPw      = "";
-var loginCompany = "MANTEC";
+// secrets.json 에서 로드 (git 제외 파일 — secrets.example.json 참조)
+var secretsPath = Path.Combine(AppContext.BaseDirectory, "secrets.json");
+if (!File.Exists(secretsPath))
+{
+    Console.WriteLine($"secrets.json not found: {secretsPath}");
+    Console.WriteLine("secrets.example.json 을 복사해 secrets.json 을 만들고 값을 채워주세요.");
+    return;
+}
+var secrets      = JsonNode.Parse(File.ReadAllText(secretsPath))!;
+var baseUrl      = secrets["baseUrl"]!.GetValue<string>();
+var loginId      = secrets["loginId"]!.GetValue<string>();
+var loginPw      = secrets["loginPw"]!.GetValue<string>();
+var loginCompany = secrets["loginCompany"]!.GetValue<string>();
 
 var http = new HttpClient();
 var jsonOpt = new JsonSerializerOptions { WriteIndented = true };
