@@ -17,9 +17,9 @@ public partial class LoginWindow : Window
 
     private void RestoreFormAndFocus()
     {
-        if (!string.IsNullOrEmpty(_auth.SavedUsername))
+        if (!string.IsNullOrEmpty(_auth.SavedLoginId))
         {
-            TxtUsername.Text        = _auth.SavedUsername;
+            TxtUsername.Text        = _auth.SavedLoginId;
             ChkRememberMe.IsChecked = true;
             PwdPassword.Focus();
         }
@@ -39,11 +39,11 @@ public partial class LoginWindow : Window
 
     private async Task ExecuteLoginAsync()
     {
-        const string companyCode = "MANTEC"; // 임시 고정, 차후 재사용 예정
-        var username = TxtUsername.Text.Trim();
-        var password = PwdPassword.Password;
+        const string loginCompany = "MANTEC"; // 임시 고정, 차후 재사용 예정
+        var loginId       = TxtUsername.Text.Trim();
+        var loginPassword = PwdPassword.Password;
 
-        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        if (string.IsNullOrEmpty(loginId) || string.IsNullOrEmpty(loginPassword))
         {
             ShowError("아이디, 비밀번호를 모두 입력하세요.");
             return;
@@ -52,7 +52,7 @@ public partial class LoginWindow : Window
         TxtError.Visibility = Visibility.Collapsed;
 
         var rememberMe = ChkRememberMe.IsChecked == true;
-        var error = await _auth.LoginAsync(companyCode, username, password, rememberMe);
+        var error = await _auth.LoginAsync(loginCompany, loginId, loginPassword, rememberMe);
         if (error != null)
         {
             ShowError(error);

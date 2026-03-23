@@ -46,7 +46,12 @@ public sealed class MockApiServer
         [JsonPropertyName("savedAt")]          public string SavedAt          { get; init; } = "";
     }
 
-    private sealed class DbUser     { public string CompanyCode { get; init; } = ""; public string Username { get; init; } = ""; public string Password { get; init; } = ""; }
+    private sealed class DbUser
+    {
+        [JsonPropertyName("login_company")] public string LoginCompany { get; init; } = "";
+        [JsonPropertyName("login_id")]      public string LoginId      { get; init; } = "";
+        [JsonPropertyName("login_password")] public string LoginPassword { get; init; } = "";
+    }
     private sealed class DbProduct  { public string ProductCode { get; init; } = ""; public string ProductName { get; init; } = ""; }
     private sealed class DbLot      { public string LotCode { get; init; } = ""; public string ProductCode { get; init; } = ""; public string ManufactureDate { get; init; } = ""; public string ProductionEquipment { get; init; } = ""; public string ProductionMold { get; init; } = ""; public string LotProductionQty { get; init; } = ""; }
     private sealed class DbMaterial { public string MaterialBarcode { get; init; } = ""; public string LotCode { get; init; } = ""; public string ContainerQty { get; init; } = ""; }
@@ -92,7 +97,7 @@ public sealed class MockApiServer
         public required Dictionary<string, DbLot>      Lots                { get; init; }
         public required Dictionary<string, DbMaterial> Materials           { get; init; }
         public required List<DbInjCond>                InjectionConditions { get; init; }
-        public required (string Company, string User, string Pass)[] Users { get; init; }
+        public required (string LoginCompany, string LoginId, string LoginPassword)[] Users { get; init; }
 
         public static SeedSnapshot From(DbData db) => new()
         {
@@ -101,7 +106,7 @@ public sealed class MockApiServer
             Materials           = db.Materials.ToDictionary(m => m.MaterialBarcode),
             InjectionConditions = db.InjectionConditions,
             Users               = db.Users.Count > 0
-                ? db.Users.Select(u => (u.CompanyCode, u.Username, u.Password)).ToArray()
+                ? db.Users.Select(u => (u.LoginCompany, u.LoginId, u.LoginPassword)).ToArray()
                 : [("MANTEC", "admin", "1234")],
         };
     }
@@ -176,7 +181,7 @@ public sealed class MockApiServer
             var seed = _seed;
             var toSave = new
             {
-                mock_users               = seed.Users.Select(u => new { companyCode = u.Company, username = u.User, password = u.Pass }),
+                mock_users               = seed.Users.Select(u => new { login_company = u.LoginCompany, login_id = u.LoginId, login_password = u.LoginPassword }),
                 mock_products            = seed.Products.Values,
                 mock_lots                = seed.Lots.Values,
                 mock_materials           = seed.Materials.Values,
@@ -206,7 +211,7 @@ public sealed class MockApiServer
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine($"  [MOCK API]  http://localhost:{_port}");
         foreach (var u in _seed.Users)
-            Console.WriteLine($"              Auth: {u.Company} / {u.User} / {u.Pass}");
+            Console.WriteLine($"              Auth: {u.LoginCompany} / {u.LoginId} / {u.LoginPassword}");
         Console.ResetColor();
 
         // db.json 실시간 감시
@@ -246,9 +251,9 @@ public sealed class MockApiServer
 
         try
         {
-            if      (meth == "POST"   && path == "/auth/login")
+            if      (meth == "POST"   && path == "/api/login")
                 await HandleLoginAsync(req, res);
-            else if (meth == "POST"   && path == "/auth/refresh")
+            else if (meth == "POST"   && path == "/api/auth/refresh")
                 await HandleRefreshAsync(req, res);
             else if (meth == "GET"    && path.StartsWith("/api/marking/materials/"))
                 await HandleGetMaterialAsync(req, res, path["/api/marking/materials/".Length..]);
@@ -270,21 +275,21 @@ public sealed class MockApiServer
         }
     }
 
-    // ── POST /auth/login ──────────────────────────────────────────────────────
+    // ── POST /api/login ───────────────────────────────────────────────────────
 
     private async Task HandleLoginAsync(HttpListenerRequest req, HttpListenerResponse res)
     {
         var body = await ReadJsonAsync<LoginRequest>(req);
-        if (body?.CompanyCode == null || body.Username == null || body.Password == null)
+        if (body?.LoginCompany == null || body.LoginId == null || body.LoginPassword == null)
         {
-            WriteJson(res, 400, Fail("INVALID_REQUEST", "companyCode, username, password 가 필요합니다."));
+            WriteJson(res, 400, Fail("INVALID_REQUEST", "login_company, login_id, login_password 가 필요합니다."));
             return;
         }
 
-        bool ok = _seed.Users.Any(u =>
-            u.Company == body.CompanyCode && u.User == body.Username && u.Pass == body.Password);
+        bool loginOk = _seed.Users.Any(u =>
+            u.LoginCompany == body.LoginCompany && u.LoginId == body.LoginId && u.LoginPassword == body.LoginPassword);
 
-        if (!ok)
+        if (!loginOk)
         {
             WriteJson(res, 401, Fail("INVALID_CREDENTIALS", "업체코드·아이디·비밀번호가 올바르지 않습니다."));
             return;
@@ -294,11 +299,11 @@ public sealed class MockApiServer
         var refreshToken = "mock-refresh-" + Guid.NewGuid().ToString("N")[..12];
         lock (_lock) _refreshTokens.Add(refreshToken);
 
-        Console.WriteLine($"  [MOCK API] Login: {body.CompanyCode}/{body.Username}");
-        WriteJson(res, 200, Ok(new { accessToken, refreshToken, expiresIn = 3600 }));
+        Console.WriteLine($"  [MOCK API] Login: {body.LoginCompany}/{body.LoginId}");
+        WriteJson(res, 200, new { ok = true, accessToken, refreshToken, expiresIn = 3600, tokenType = "Bearer" });
     }
 
-    // ── POST /auth/refresh ────────────────────────────────────────────────────
+    // ── POST /api/auth/refresh ────────────────────────────────────────────────
 
     private async Task HandleRefreshAsync(HttpListenerRequest req, HttpListenerResponse res)
     {
@@ -323,7 +328,7 @@ public sealed class MockApiServer
         lock (_lock) _refreshTokens.Add(newRefresh);
 
         Console.WriteLine($"  [MOCK API] Token rotated");
-        WriteJson(res, 200, Ok(new { accessToken = newAccess, refreshToken = newRefresh, expiresIn = 3600 }));
+        WriteJson(res, 200, new { ok = true, accessToken = newAccess, refreshToken = newRefresh, expiresIn = 3600, tokenType = "Bearer" });
     }
 
     // ── GET /api/marking/materials/:materialBarcode ───────────────────────────
@@ -553,9 +558,9 @@ public sealed class MockApiServer
 
     private sealed class LoginRequest
     {
-        public string? CompanyCode { get; init; }
-        public string? Username    { get; init; }
-        public string? Password    { get; init; }
+        [JsonPropertyName("login_company")]  public string? LoginCompany  { get; init; }
+        [JsonPropertyName("login_id")]       public string? LoginId       { get; init; }
+        [JsonPropertyName("login_password")] public string? LoginPassword { get; init; }
     }
 
     private sealed class RefreshRequest

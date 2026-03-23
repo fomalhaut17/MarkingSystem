@@ -24,8 +24,8 @@ public sealed class AuthService
     private bool    _rememberMe;   // 현재 세션의 저장 방식을 기억
 
     // 로그인 폼 복원용 (rememberMe=true 시 파일에 저장)
-    public string? SavedCompanyCode { get; private set; }
-    public string? SavedUsername    { get; private set; }
+    public string? SavedLoginCompany { get; private set; }
+    public string? SavedLoginId      { get; private set; }
 
     public event EventHandler? LogoutRequested;
 
@@ -61,37 +61,38 @@ public sealed class AuthService
     /// rememberMe=true 시 Refresh Token을 파일에 저장, false 시 메모리만 보관.
     /// 성공 시 null, 실패 시 오류 메시지 반환.
     /// </summary>
-    public async Task<string?> LoginAsync(string companyCode, string username, string password, bool rememberMe)
+    public async Task<string?> LoginAsync(string loginCompany, string loginId, string loginPassword, bool rememberMe)
     {
         try
         {
-            var body     = new { companyCode, username, password };
-            var response = await _http.PostAsJsonAsync($"{_authBaseUrl}/login", body);
-            var wrapper  = await response.Content.ReadFromJsonAsync<AuthApiResponse<TokenData>>();
+            var body     = new { login_company = loginCompany, login_id = loginId, login_password = loginPassword };
+            var response = await _http.PostAsJsonAsync($"{_authBaseUrl}/api/login", body);
+            var result   = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
-            if (response.IsSuccessStatusCode && wrapper?.Success == true && wrapper.Data != null)
+            if (response.IsSuccessStatusCode && result?.Ok == true &&
+                result.AccessToken != null && result.RefreshToken != null)
             {
-                _accessToken  = wrapper.Data.AccessToken;   // 메모리만
-                _refreshToken = wrapper.Data.RefreshToken;
+                _accessToken  = result.AccessToken;   // 메모리만
+                _refreshToken = result.RefreshToken;
                 _rememberMe   = rememberMe;
 
                 if (rememberMe)
                 {
-                    SavedCompanyCode = companyCode;
-                    SavedUsername    = username;
+                    SavedLoginCompany = loginCompany;
+                    SavedLoginId      = loginId;
                     SaveToFile();
                 }
                 else
                 {
-                    SavedCompanyCode = null;
-                    SavedUsername    = null;
+                    SavedLoginCompany = null;
+                    SavedLoginId      = null;
                     DeleteTokenFile();
                 }
 
                 return null;
             }
 
-            return wrapper?.Error?.Message ?? "로그인에 실패했습니다.";
+            return "로그인에 실패했습니다.";
         }
         catch (Exception ex)
         {
@@ -112,13 +113,14 @@ public sealed class AuthService
         try
         {
             var body     = new { refreshToken = _refreshToken };
-            var response = await _http.PostAsJsonAsync($"{_authBaseUrl}/refresh", body);
-            var wrapper  = await response.Content.ReadFromJsonAsync<AuthApiResponse<TokenData>>();
+            var response = await _http.PostAsJsonAsync($"{_authBaseUrl}/api/auth/refresh", body);
+            var result   = await response.Content.ReadFromJsonAsync<LoginResponse>();
 
-            if (response.IsSuccessStatusCode && wrapper?.Success == true && wrapper.Data != null)
+            if (response.IsSuccessStatusCode && result?.Ok == true &&
+                result.AccessToken != null && result.RefreshToken != null)
             {
-                _accessToken  = wrapper.Data.AccessToken;   // 메모리만
-                _refreshToken = wrapper.Data.RefreshToken;
+                _accessToken  = result.AccessToken;   // 메모리만
+                _refreshToken = result.RefreshToken;
 
                 if (_rememberMe) SaveToFile();  // 기존 저장 방식 유지
 
@@ -140,7 +142,7 @@ public sealed class AuthService
         _accessToken  = null;
         _refreshToken = null;
         _rememberMe   = false;
-        // SavedCompanyCode / SavedUsername 은 유지 — 로그인 폼 복원에 사용
+        // SavedLoginCompany / SavedLoginId 은 유지 — 로그인 폼 복원에 사용
         DeleteTokenFile();
     }
 
@@ -153,9 +155,9 @@ public sealed class AuthService
             if (!File.Exists(_tokenFilePath)) return;
             var json = File.ReadAllText(_tokenFilePath);
             var data = JsonSerializer.Deserialize<StoredToken>(json);
-            _refreshToken    = data?.RefreshToken;
-            SavedCompanyCode = data?.CompanyCode;
-            SavedUsername    = data?.Username;
+            _refreshToken     = data?.RefreshToken;
+            SavedLoginCompany = data?.LoginCompany;
+            SavedLoginId      = data?.LoginId;
         }
         catch { }
     }
@@ -165,7 +167,7 @@ public sealed class AuthService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_tokenFilePath)!);
-            var json = JsonSerializer.Serialize(new StoredToken(_refreshToken, SavedCompanyCode, SavedUsername));
+            var json = JsonSerializer.Serialize(new StoredToken(_refreshToken, SavedLoginCompany, SavedLoginId));
             File.WriteAllText(_tokenFilePath, json);
         }
         catch { }
@@ -180,27 +182,16 @@ public sealed class AuthService
     // ── DTOs ──────────────────────────────────────────────────────────────────
 
     private sealed record StoredToken(
-        [property: JsonPropertyName("refreshToken")] string? RefreshToken,
-        [property: JsonPropertyName("companyCode")]  string? CompanyCode,
-        [property: JsonPropertyName("username")]     string? Username);
+        [property: JsonPropertyName("refreshToken")]  string? RefreshToken,
+        [property: JsonPropertyName("login_company")] string? LoginCompany,
+        [property: JsonPropertyName("login_id")]      string? LoginId);
 
-    private sealed class TokenData
+    private sealed class LoginResponse
     {
+        [JsonPropertyName("ok")]           public bool    Ok           { get; init; }
         [JsonPropertyName("accessToken")]  public string? AccessToken  { get; init; }
         [JsonPropertyName("refreshToken")] public string? RefreshToken { get; init; }
         [JsonPropertyName("expiresIn")]    public int     ExpiresIn    { get; init; }
-    }
-
-    private sealed class AuthApiResponse<T>
-    {
-        [JsonPropertyName("success")] public bool      Success { get; init; }
-        [JsonPropertyName("data")]    public T?         Data    { get; init; }
-        [JsonPropertyName("error")]   public AuthError? Error   { get; init; }
-    }
-
-    private sealed class AuthError
-    {
-        [JsonPropertyName("code")]    public string? Code    { get; init; }
-        [JsonPropertyName("message")] public string? Message { get; init; }
+        [JsonPropertyName("tokenType")]    public string? TokenType    { get; init; }
     }
 }
