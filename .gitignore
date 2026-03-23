@@ -366,3 +366,4 @@ FodyWeavers.xsd
 dist/
 # API test secrets
 secrets.json
+.claude/
