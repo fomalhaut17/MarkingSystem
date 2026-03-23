@@ -1,0 +1,680 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "STD-06 MST-060 용기 마스터 관리 (Prism Mock용)",
+    "version": "1.0.0",
+    "description": "화면: 1.6.용기마스터관리.html. 메뉴상수정의.txt 기준 API prefix=/api, react route path=/mst/container"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4010"
+    }
+  ],
+  "tags": [
+    {
+      "name": "mst-container",
+      "description": "용기 마스터"
+    }
+  ],
+  "paths": {
+    "/api/mst/container/search": {
+      "post": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "조회(검색) - 페이지네이션 + 집계요약 동시 제공",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerSearchRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "기본 조회(목업데이터 기준)",
+                  "value": {
+                    "division": "",
+                    "sn": "",
+                    "capacity": "",
+                    "spec": "",
+                    "manufacturer": "",
+                    "item_group": "",
+                    "availability": "",
+                    "location": "",
+                    "status": "",
+                    "page": 1,
+                    "pageSize": 10
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContainerSearchResponse"
+                },
+                "examples": {
+                  "sample": {
+                    "summary": "요청 예시 결과(목업 기준)",
+                    "value": {
+                      "items": [
+                        {
+                          "id": 1,
+                          "division": "VESSEL",
+                          "sn": "130L-017",
+                          "capacity": "130L",
+                          "spec": "",
+                          "manufacturer": "FT",
+                          "item_group": "[반제품]HCDS",
+                          "availability": "가용",
+                          "location": "A-01-01",
+                          "status": "충진완료",
+                          "filling_count": 42,
+                          "mfg_date": "2024-01-15"
+                        },
+                        {
+                          "id": 4,
+                          "division": "VESSEL",
+                          "sn": "180L-075",
+                          "capacity": "180L",
+                          "spec": "",
+                          "manufacturer": "FT",
+                          "item_group": "[반제품]HCDS",
+                          "availability": "가용",
+                          "location": "고객사",
+                          "status": "고객체류",
+                          "filling_count": 12,
+                          "mfg_date": "2026-01-05"
+                        },
+                        {
+                          "id": 2,
+                          "division": "CANISTER",
+                          "sn": "DNF-U091-SV9-025",
+                          "capacity": "19L",
+                          "spec": "",
+                          "manufacturer": "E",
+                          "item_group": "[제품]ACP",
+                          "availability": "가용",
+                          "location": "B-02-03",
+                          "status": "정비대기",
+                          "filling_count": 105,
+                          "mfg_date": "2025-02-10"
+                        },
+                        {
+                          "id": 3,
+                          "division": "CANISTER",
+                          "sn": "DNF-U04-SV4-158",
+                          "capacity": "4L",
+                          "spec": "",
+                          "manufacturer": "",
+                          "item_group": "[제품]DIPAS",
+                          "availability": "불용",
+                          "location": "-",
+                          "status": "폐기",
+                          "filling_count": 210,
+                          "mfg_date": "2024-06-20"
+                        },
+                        {
+                          "id": 5,
+                          "division": "CYLINDER",
+                          "sn": "FT212949",
+                          "capacity": "44L",
+                          "spec": "",
+                          "manufacturer": "HP",
+                          "item_group": "[제품] Propylene",
+                          "availability": "가용",
+                          "location": "A-01-05",
+                          "status": "충진완료",
+                          "filling_count": 88,
+                          "mfg_date": "2025-03-10"
+                        }
+                      ],
+                      "totalCount": 5,
+                      "summary": {
+                        "total": 5,
+                        "vessel": 2,
+                        "canister": 2,
+                        "cylinder": 1,
+                        "discard": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mst/container": {
+      "post": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "추가(신규 저장)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerUpsertRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "신규 등록(목업)",
+                  "value": {
+                    "division": "VESSEL",
+                    "sn": "130L-018",
+                    "item_group": "[반제품]HCDS",
+                    "capacity": "130L",
+                    "spec": "",
+                    "manufacturer": "FT",
+                    "avail_switch": true,
+                    "remark": ""
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Container"
+                },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "id": 6,
+                      "division": "VESSEL",
+                      "sn": "130L-018",
+                      "capacity": "130L",
+                      "spec": "",
+                      "manufacturer": "FT",
+                      "item_group": "[반제품]HCDS",
+                      "availability": "가용",
+                      "location": "-",
+                      "status": "충진대기",
+                      "filling_count": 0,
+                      "mfg_date": ""
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mst/container/{id}": {
+      "put": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "수정(행 저장)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContainerUpsertRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "수정(목업)",
+                  "value": {
+                    "division": "VESSEL",
+                    "sn": "130L-017",
+                    "item_group": "[반제품]HCDS",
+                    "capacity": "130L",
+                    "spec": "",
+                    "manufacturer": "FT",
+                    "avail_switch": false,
+                    "remark": ""
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "수정 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Container"
+                },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "id": 1,
+                      "division": "VESSEL",
+                      "sn": "130L-017",
+                      "capacity": "130L",
+                      "spec": "",
+                      "manufacturer": "FT",
+                      "item_group": "[반제품]HCDS",
+                      "availability": "불용",
+                      "location": "A-01-01",
+                      "status": "충진완료",
+                      "filling_count": 42,
+                      "mfg_date": "2024-01-15"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "대상 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "삭제(행 삭제)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDeleteResponse"
+                },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "deletedCount": 1,
+                      "deletedIds": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "대상 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mst/container/batch-delete": {
+      "post": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "배치 삭제(선택 삭제)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchIdsRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "선택 삭제(목업)",
+                  "value": {
+                    "ids": [
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDeleteResponse"
+                },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "deletedCount": 2,
+                      "deletedIds": [
+                        2,
+                        3
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mst/container/batch-confirm": {
+      "post": {
+        "tags": [
+          "mst-container"
+        ],
+        "summary": "일괄 확정(체크된 row들에 편집영역 내용 일괄 반영)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchConfirmRequest"
+              },
+              "examples": {
+                "sample": {
+                  "summary": "일괄 확정(목업)",
+                  "value": {
+                    "ids": [
+                      1,
+                      4
+                    ],
+                    "edit": {
+                      "division": "VESSEL",
+                      "sn": "130L-017",
+                      "item_group": "[반제품]HCDS",
+                      "capacity": "130L",
+                      "spec": "",
+                      "manufacturer": "FT",
+                      "avail_switch": true,
+                      "remark": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "일괄 반영 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchConfirmResponse"
+                },
+                "examples": {
+                  "sample": {
+                    "value": {
+                      "updatedCount": 2,
+                      "updatedIds": [
+                        1,
+                        4
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Container": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "division": { "type": "string", "description": "VESSEL/CANISTER/CYLINDER" },
+          "sn": { "type": "string", "description": "용기번호" },
+          "capacity": { "type": "string" },
+          "spec": { "type": "string" },
+          "manufacturer": { "type": "string" },
+          "item_group": { "type": "string" },
+          "availability": { "type": "string", "description": "가용/불용" },
+          "location": { "type": "string" },
+          "status": { "type": "string" },
+          "filling_count": { "type": "integer" },
+          "mfg_date": { "type": "string", "description": "YYYY-MM-DD (빈 문자열 가능)" }
+        },
+        "required": [
+          "id",
+          "division",
+          "sn",
+          "capacity",
+          "manufacturer",
+          "availability",
+          "location",
+          "status",
+          "filling_count",
+          "mfg_date"
+        ]
+      },
+      "ContainerSearchRequest": {
+        "type": "object",
+        "properties": {
+          "division": { "type": "string", "description": "용기 구분(필터)" },
+          "sn": { "type": "string", "description": "용기번호(부분일치)" },
+          "capacity": { "type": "string", "description": "용량(정확일치)" },
+          "spec": { "type": "string", "description": "규격(부분일치)" },
+          "manufacturer": { "type": "string", "description": "제조사(정확일치)" },
+          "item_group": { "type": "string", "description": "제품그룹(정확일치)" },
+          "availability": { "type": "string", "description": "가용/불용(정확일치)" },
+          "location": { "type": "string", "description": "위치(정확일치)" },
+          "status": { "type": "string", "description": "용기상태(정확일치)" },
+          "page": { "type": "integer", "minimum": 1, "description": "1-based" },
+          "pageSize": { "type": "integer", "minimum": 1, "description": "그리드 페이지 크기" }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ]
+      },
+      "ContainerSummary": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer", "description": "전체 용기 수" },
+          "vessel": { "type": "integer", "description": "베슬 수(division=VESSEL)" },
+          "canister": { "type": "integer", "description": "케니스터 수(division=CANISTER)" },
+          "cylinder": { "type": "integer", "description": "실린더 수(division=CYLINDER)" },
+          "discard": { "type": "integer", "description": "불용/폐기(availability=불용 OR status=폐기)" }
+        },
+        "required": [
+          "total",
+          "vessel",
+          "canister",
+          "cylinder",
+          "discard"
+        ]
+      },
+      "ContainerSearchResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Container" }
+          },
+          "totalCount": { "type": "integer", "description": "전체 결과 건수(필터 기준)" },
+          "summary": { "$ref": "#/components/schemas/ContainerSummary" }
+        },
+        "required": [
+          "items",
+          "totalCount",
+          "summary"
+        ]
+      },
+      "ContainerUpsertRequest": {
+        "type": "object",
+        "properties": {
+          "division": { "type": "string" },
+          "sn": { "type": "string" },
+          "item_group": { "type": "string" },
+          "capacity": { "type": "string" },
+          "spec": { "type": "string" },
+          "manufacturer": { "type": "string" },
+          "avail_switch": { "type": "boolean", "description": "true=가용, false=불용" },
+          "remark": { "type": "string" }
+        },
+        "required": [
+          "division",
+          "sn",
+          "item_group",
+          "capacity",
+          "manufacturer",
+          "avail_switch"
+        ]
+      },
+      "BatchIdsRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "BatchDeleteResponse": {
+        "type": "object",
+        "properties": {
+          "deletedCount": { "type": "integer" },
+          "deletedIds": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        },
+        "required": [
+          "deletedCount",
+          "deletedIds"
+        ]
+      },
+      "BatchConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "minItems": 1
+          },
+          "edit": { "$ref": "#/components/schemas/ContainerUpsertRequest" }
+        },
+        "required": [
+          "ids",
+          "edit"
+        ]
+      },
+      "BatchConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "updatedCount": { "type": "integer" },
+          "updatedIds": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        },
+        "required": [
+          "updatedCount",
+          "updatedIds"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "object" }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      }
+    }
+  }
+}
+
