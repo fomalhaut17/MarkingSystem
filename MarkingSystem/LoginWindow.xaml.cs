@@ -39,7 +39,7 @@ public partial class LoginWindow : Window
 
     private async Task ExecuteLoginAsync()
     {
-        const string companyCode = "DEMO"; // 임시 고정, 차후 재사용 예정
+        const string companyCode = "MANTEC"; // 임시 고정, 차후 재사용 예정
         var username = TxtUsername.Text.Trim();
         var password = PwdPassword.Password;
 

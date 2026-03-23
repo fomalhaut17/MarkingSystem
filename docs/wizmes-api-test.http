@@ -1,0 +1,74 @@
+# wizMES API 테스트
+# VS Code: REST Client 확장 필요 (humao.rest-client)
+# Visual Studio: 기본 지원 (.http 파일)
+#
+# 순서: 1 Login → 토큰 복사 → 2 이후 API 테스트
+
+@baseUrl = https://wizmes.com
+@companyCode = DEMO
+@username =
+@password =
+
+### 1. 로그인
+# @name login
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "login_id": "{{username}}",
+  "login_password": "{{password}}",
+  "login_company": "{{companyCode}}"
+}
+
+###
+
+# 위 응답의 accessToken을 아래에 붙여넣기
+@accessToken =
+
+### 2. 토큰 갱신
+# @name refresh
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": ""
+}
+
+###
+
+### 3. 물류바코드로 Lot 조회
+POST {{baseUrl}}/api/mantec/lot/lookup_by_barcode
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "barcode": "12345678901234"
+}
+
+###
+
+### 4. 검사결과 일괄 저장
+POST {{baseUrl}}/api/mantec/lot/save_inspection
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "inspection_list": [
+    {
+      "barcode": "12345678901234",
+      "lot_no": "P2063121-B1-A:SHVB26073000001",
+      "insp_result_code": "PASS"
+    }
+  ]
+}
+
+###
+
+### 5. 생산 Lot 상세 조회
+POST {{baseUrl}}/api/mantec/lot/detail_with_equipment
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "lot_no": "P2063121-B1-A:SHVB26073000001"
+}

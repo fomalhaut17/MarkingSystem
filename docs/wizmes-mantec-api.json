@@ -1,0 +1,377 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WizMES — MANTEC Lot & API 인증",
+    "description": "`MantecLotController` 및 JSON 로그인(`ApiLoginController`)에 대응하는 스펙입니다.\n\n- **Base path**: 애플리케이션 컨텍스트(예: `/wizmes_web`)가 붙는 경우 `servers.url`을 조정하세요.\n- 동일 핸들러가 **`/api/...`** 와 **`/mantec/...`** (또는 컨텍스트 루트 기준) 두 경로에 매핑될 수 있습니다. 여기서는 **`/api` 접두**를 기준으로 기술합니다.\n- MANTEC Lot API 호출 시 **`Authorization: Bearer {accessToken}`** 사용을 권장합니다(서버 JWT 검증 설정에 따름).",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{host}{basePath}",
+      "description": "운영/개발 서버 (예시)",
+      "variables": {
+        "host": {
+          "default": "wizmes.com"
+        },
+        "basePath": {
+          "default": "",
+          "description": "컨텍스트 경로가 있으면 `/wizmes_web` 등으로 설정"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "로그인·액세스 토큰 갱신"
+    },
+    {
+      "name": "MANTEC Lot",
+      "description": "C# MANTEC 연동 생산 Lot API"
+    }
+  ],
+  "paths": {
+    "/api/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "JSON 로그인 (액세스·리프레시 JWT 발급)",
+        "operationId": "apiLogin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "sample": {
+                  "value": {
+                    "login_id": "user",
+                    "login_password": "user1111",
+                    "login_company": "DEMO"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "성공 또는 비즈니스 오류(`ok:false`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "JSON 로그인 (`/api/login` 과 동일 동작)",
+        "operationId": "loginAlias",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LoginResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "리프레시 토큰으로 액세스·리프레시 토큰 재발급",
+        "operationId": "refreshToken",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "LoginResponse 와 동일 필드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "토큰 갱신 (`/api/auth/refresh` 와 동일)",
+        "operationId": "refreshAlias",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mantec/lot/lookup_by_barcode": {
+      "post": {
+        "tags": ["MANTEC Lot"],
+        "summary": "물류 바코드로 Lot 조회",
+        "operationId": "mantecLookupByBarcode",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupByBarcodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "서비스/DAO 결과 Map (필드는 구현·쿼리에 따름)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericMapResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mantec/lot/save_inspection": {
+      "post": {
+        "tags": ["MANTEC Lot"],
+        "summary": "검사결과 일괄 저장",
+        "description": "본문 키는 **`inspection_list`** (배열). 각 원소는 DAO/매퍼가 기대하는 필드(예: `barcode`, `lot_no`, `insp_result_code` 등)를 담은 객체입니다.",
+        "operationId": "mantecSaveInspection",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveInspectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericMapResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mantec/lot/detail_with_equipment": {
+      "post": {
+        "tags": ["MANTEC Lot"],
+        "summary": "생산 Lot 상세 + 설비(사출) 조건",
+        "operationId": "mantecDetailWithEquipment",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DetailWithEquipmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericMapResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "`POST /api/login` 응답의 `accessToken` 을 `Authorization` 헤더에 `Bearer ` 접두와 함께 전달합니다."
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["login_id", "login_password", "login_company"],
+        "properties": {
+          "login_id": {
+            "type": "string"
+          },
+          "login_password": {
+            "type": "string",
+            "format": "password",
+            "description": "서버에서 SHA-256 등으로 해시 후 검증"
+          },
+          "login_company": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "description": "실패 시 코드 (예: MISSING_CREDENTIALS, INVALID_LOGIN, …)"
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "액세스 토큰 유효 시간(초). 코드상 3600",
+            "example": 3600
+          }
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "LookupByBarcodeRequest": {
+        "type": "object",
+        "required": ["barcode"],
+        "properties": {
+          "barcode": {
+            "type": "string"
+          }
+        }
+      },
+      "SaveInspectionRequest": {
+        "type": "object",
+        "required": ["inspection_list"],
+        "properties": {
+          "inspection_list": {
+            "type": "array",
+            "description": "검사 1건당 1개 객체 (필드명은 DB/MERGE 매퍼와 일치)",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "example": {
+          "inspection_list": [
+            {
+              "barcode": "BC001",
+              "lot_no": "P2063121-B1-A:SHVB2513000001",
+              "insp_result_code": "PASS"
+            }
+          ]
+        }
+      },
+      "DetailWithEquipmentRequest": {
+        "type": "object",
+        "required": ["lot_no"],
+        "properties": {
+          "lot_no": {
+            "type": "string",
+            "minLength": 29,
+            "maxLength": 29,
+            "description": "29자리 생산 Lot"
+          }
+        }
+      },
+      "GenericMapResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Spring에서 `Map` JSON 직렬화. `ok`, `message` 등과 업무 필드가 섞일 수 있음."
+      }
+    }
+  }
+}
