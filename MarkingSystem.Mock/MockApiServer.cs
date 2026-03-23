@@ -107,7 +107,7 @@ public sealed class MockApiServer
             InjectionConditions = db.InjectionConditions,
             Users               = db.Users.Count > 0
                 ? db.Users.Select(u => (u.LoginCompany, u.LoginId, u.LoginPassword)).ToArray()
-                : [("MANTEC", "admin", "1234")],
+                : [("DEMO", "user", "user1111")],
         };
     }
 
