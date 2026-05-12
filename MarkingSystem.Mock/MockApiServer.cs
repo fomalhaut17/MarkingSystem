@@ -35,6 +35,19 @@ public sealed class MockApiServer
         public List<DbIssueResult> IssueResults { get; init; } = [];
         [JsonPropertyName("mock_injection_conditions")]
         public List<DbInjCond> InjectionConditions { get; init; } = [];
+        [JsonPropertyName("mock_v2_barcodes")]
+        public List<DbV2Barcode> V2Barcodes { get; init; } = [];
+    }
+
+    private sealed class DbV2Barcode
+    {
+        [JsonPropertyName("barcode")]          public string             Barcode         { get; init; } = "";
+        [JsonPropertyName("barcode_info")]     public JsonElement        BarcodeInfo     { get; init; }
+        [JsonPropertyName("lot_no_list")]      public List<JsonElement>? LotNoList       { get; init; }
+        [JsonPropertyName("lot_context")]      public JsonElement        LotContext      { get; init; }
+        [JsonPropertyName("inject_condition")] public JsonElement        InjectCondition { get; init; }
+        [JsonPropertyName("inject_defaults")]  public JsonElement        InjectDefaults  { get; init; }
+        [JsonPropertyName("inject_rn_labels")] public JsonElement        InjectRnLabels  { get; init; }
     }
 
     private sealed class DbIssueResult
@@ -97,6 +110,7 @@ public sealed class MockApiServer
         public required Dictionary<string, DbLot>      Lots                { get; init; }
         public required Dictionary<string, DbMaterial> Materials           { get; init; }
         public required List<DbInjCond>                InjectionConditions { get; init; }
+        public required Dictionary<string, DbV2Barcode> V2Barcodes         { get; init; }
         public required (string LoginCompany, string LoginId, string LoginPassword)[] Users { get; init; }
 
         public static SeedSnapshot From(DbData db) => new()
@@ -105,6 +119,7 @@ public sealed class MockApiServer
             Lots                = db.Lots.ToDictionary(l => l.LotCode),
             Materials           = db.Materials.ToDictionary(m => m.MaterialBarcode),
             InjectionConditions = db.InjectionConditions,
+            V2Barcodes          = db.V2Barcodes.ToDictionary(b => b.Barcode),
             Users               = db.Users.Count > 0
                 ? db.Users.Select(u => (u.LoginCompany, u.LoginId, u.LoginPassword)).ToArray()
                 : [("DEMO", "user", "user1111")],
@@ -191,6 +206,16 @@ public sealed class MockApiServer
                     InspectionResult = r.InspectionResult, SavedAt = r.SavedAt,
                 }),
                 mock_injection_conditions = seed.InjectionConditions,
+                mock_v2_barcodes          = seed.V2Barcodes.Values.Select(b => new
+                {
+                    barcode          = b.Barcode,
+                    barcode_info     = b.BarcodeInfo,
+                    lot_no_list      = b.LotNoList,
+                    lot_context      = b.LotContext,
+                    inject_condition = b.InjectCondition,
+                    inject_defaults  = b.InjectDefaults,
+                    inject_rn_labels = b.InjectRnLabels,
+                }),
             };
             File.WriteAllText(_dbPath, JsonSerializer.Serialize(toSave, SaveOpts), Encoding.UTF8);
         }
@@ -265,6 +290,12 @@ public sealed class MockApiServer
                 HandleGetProductionLot(res, path["/api/marking/production-lots/".Length..]);
             else if (meth == "DELETE" && path == "/api/marking/test/reset")
                 HandleTestReset(res);
+            else if (meth == "POST"   && path == "/api/mantec/lot/lookup_by_barcode")
+                await HandleV2LookupByBarcodeAsync(req, res);
+            else if (meth == "POST"   && path == "/api/mantec/lot/save_inspection")
+                await HandleV2SaveInspectionAsync(req, res);
+            else if (meth == "POST"   && path == "/api/mantec/lot/latest_inject_by_barcode")
+                await HandleV2LatestInjectByBarcodeAsync(req, res);
             else
                 WriteJson(res, 404, Fail("NOT_FOUND", "Not found"));
         }
@@ -531,6 +562,120 @@ public sealed class MockApiServer
         WriteJson(res, 200, Ok(new { clearedCount = cleared }));
     }
 
+    // ── POST /api/mantec/lot/lookup_by_barcode (v2) ───────────────────────────
+    // 실서버 응답: { barcode_info: {...}, lot_no_list: [...] } / 미존재: {}
+
+    private async Task HandleV2LookupByBarcodeAsync(HttpListenerRequest req, HttpListenerResponse res)
+    {
+        var body = await ReadJsonAsync<V2BarcodeRequest>(req);
+        var barcode = body?.Barcode ?? "";
+
+        if (!_seed.V2Barcodes.TryGetValue(barcode, out var rec))
+        {
+            Console.WriteLine($"  [MOCK API] v2 lookup: {barcode} → not found");
+            WriteJson(res, 200, new { });
+            return;
+        }
+
+        Console.WriteLine($"  [MOCK API] v2 lookup: {barcode} → ok");
+        WriteJson(res, 200, new
+        {
+            lot_no_list  = rec.LotNoList ?? new List<JsonElement>(),
+            barcode_info = rec.BarcodeInfo,
+        });
+    }
+
+    // ── POST /api/mantec/lot/save_inspection (v2) ─────────────────────────────
+    // 실서버 응답: { requestedCount, ok, message, savedCount, resultList }
+
+    private async Task HandleV2SaveInspectionAsync(HttpListenerRequest req, HttpListenerResponse res)
+    {
+        var body = await ReadJsonAsync<V2SaveInspectionRequest>(req);
+        var requested = body?.InspectionList?.Count ?? 0;
+
+        if (requested == 0)
+        {
+            WriteJson(res, 200, new
+            {
+                requestedCount = 0,
+                ok             = false,
+                message        = "EMPTY_ITEMS",
+                savedCount     = 0,
+                resultList     = Array.Empty<object>(),
+            });
+            return;
+        }
+
+        if (body!.InspectionList!.Any(i => string.IsNullOrWhiteSpace(i.Barcode) ||
+                                           string.IsNullOrWhiteSpace(i.LotNo)   ||
+                                           string.IsNullOrWhiteSpace(i.InspResultCode)))
+        {
+            WriteJson(res, 200, new
+            {
+                requestedCount = requested,
+                ok             = false,
+                message        = "MISSING_OR_INVALID_ITEMS",
+                savedCount     = 0,
+                resultList     = Array.Empty<object>(),
+            });
+            return;
+        }
+
+        Console.WriteLine($"  [MOCK API] v2 save_inspection: count={requested}");
+        WriteJson(res, 200, new
+        {
+            requestedCount = requested,
+            ok             = true,
+            message        = "OK",
+            savedCount     = requested,
+            resultList     = Array.Empty<object>(),
+        });
+    }
+
+    // ── POST /api/mantec/lot/latest_inject_by_barcode (v2) ────────────────────
+    // 실서버 응답: { LOT_CONTEXT: {...}, MAIN: [...] }
+    // 미존재: LOT_CONTEXT에 store_barcode만 들어가고 나머지 키 누락
+
+    private async Task HandleV2LatestInjectByBarcodeAsync(HttpListenerRequest req, HttpListenerResponse res)
+    {
+        var body = await ReadJsonAsync<V2BarcodeRequest>(req);
+        var barcode = body?.Barcode ?? "";
+
+        if (!_seed.V2Barcodes.TryGetValue(barcode, out var rec))
+        {
+            Console.WriteLine($"  [MOCK API] v2 latest_inject: {barcode} → not found");
+            WriteJson(res, 200, new
+            {
+                LOT_CONTEXT = new { store_barcode = barcode },
+                MAIN        = Array.Empty<object>(),
+            });
+            return;
+        }
+
+        Console.WriteLine($"  [MOCK API] v2 latest_inject: {barcode} → ok");
+        // MAIN이 1개일 때만 INJECT_DEFAULTS / INJECT_RN_LABELS 동봉 (백엔드 명세 §7.3)
+        var hasDefaults = rec.InjectDefaults.ValueKind == JsonValueKind.Object;
+        var hasLabels   = rec.InjectRnLabels.ValueKind == JsonValueKind.Object;
+        if (hasDefaults || hasLabels)
+        {
+            WriteJson(res, 200, new
+            {
+                LOT_CONTEXT      = rec.LotContext,
+                MAIN             = new[] { rec.InjectCondition },
+                INJECT_DEFAULTS  = hasDefaults ? rec.InjectDefaults : (object)new { },
+                INJECT_RN_LABELS = hasLabels   ? rec.InjectRnLabels : (object)new { },
+            });
+        }
+        else
+        {
+            WriteJson(res, 200, new
+            {
+                LOT_CONTEXT = rec.LotContext,
+                MAIN        = new[] { rec.InjectCondition },
+            });
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private static object Ok(object data)   => new { success = true,  data, error = (object?)null };
@@ -578,5 +723,26 @@ public sealed class MockApiServer
     {
         public string?                MaterialBarcode { get; init; }
         public List<IssueResultItem>? Results         { get; init; }
+    }
+
+    // ── v2 DTOs ───────────────────────────────────────────────────────────────
+
+    private sealed class V2BarcodeRequest
+    {
+        [JsonPropertyName("barcode")]       public string? Barcode      { get; init; }
+        [JsonPropertyName("login_company")] public string? LoginCompany { get; init; }
+    }
+
+    private sealed class V2InspectionItem
+    {
+        [JsonPropertyName("barcode")]          public string? Barcode        { get; init; }
+        [JsonPropertyName("lot_no")]           public string? LotNo          { get; init; }
+        [JsonPropertyName("insp_result_code")] public string? InspResultCode { get; init; }
+    }
+
+    private sealed class V2SaveInspectionRequest
+    {
+        [JsonPropertyName("inspection_list")] public List<V2InspectionItem>? InspectionList { get; init; }
+        [JsonPropertyName("login_company")]   public string?                 LoginCompany   { get; init; }
     }
 }
